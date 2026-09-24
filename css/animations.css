@@ -1,0 +1,291 @@
+/* ==========================================================================
+   Salvis Animation FX — entrances, micro-interactions, celebrations
+   ========================================================================== */
+
+/* ---------- Page transitions ---------- */
+@keyframes pageFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pageSlideUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.app-wrapper,
+.auth-wrapper {
+  animation: pageFadeIn 0.45s ease-out both;
+}
+
+/* ---------- Card entrance (staggered) ---------- */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.card-enter {
+  animation: fadeInUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ---------- Toast (slide in from right + auto-dismiss progress) ---------- */
+@keyframes toastInRight {
+  from {
+    opacity: 0;
+    transform: translateX(120%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes toastOutRight {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(120%);
+  }
+}
+
+@keyframes toastProgress {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+.toast {
+  animation: toastInRight 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.toast.toast-out {
+  animation: toastOutRight 0.3s ease-in forwards;
+}
+
+.toast-progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.65);
+  border-radius: 0 3px 3px 0;
+  animation-name: toastProgress;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+/* ---------- Modal spring entrance ---------- */
+@keyframes modalSpringIn {
+  0% {
+    opacity: 0;
+    transform: translateY(24px) scale(0.92);
+  }
+  60% {
+    transform: translateY(-3px) scale(1.015);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-overlay {
+  transition: opacity 0.25s ease;
+}
+
+.modal-overlay.active .modal-container {
+  animation: modalSpringIn 0.38s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ---------- Skeleton loading ---------- */
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+@keyframes skeletonShimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.skeleton-card {
+  pointer-events: none;
+  animation: skeletonPulse 1.4s ease-in-out infinite;
+}
+
+.skeleton-line {
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-line::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  background-size: 400px 100%;
+  animation: skeletonShimmer 1.3s linear infinite;
+}
+
+[data-theme="dark"] .skeleton-line {
+  background: #1b2a47;
+}
+
+[data-theme="dark"] .skeleton-line::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+  background-size: 400px 100%;
+}
+
+/* ---------- Progress shimmer ---------- */
+@keyframes progressShimmer {
+  0% { background-position: 0 0; }
+  100% { background-position: 32px 0; }
+}
+
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.35) 50%, rgba(255, 255, 255, 0) 100%);
+  background-size: 32px 100%;
+  animation: progressShimmer 1.6s linear infinite;
+  border-radius: var(--radius-full);
+}
+
+/* ---------- Button ripple ---------- */
+@keyframes rippleExpand {
+  from {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  to {
+    transform: scale(3.2);
+    opacity: 0;
+  }
+}
+
+.btn .ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+  transform: scale(0);
+  animation: rippleExpand 0.7s ease-out forwards;
+  z-index: 1;
+}
+
+.btn {
+  position: relative;
+  overflow: hidden;
+}
+
+[data-theme="dark"] .btn .ripple {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ---------- Confetti celebration ---------- */
+@keyframes confettiFall {
+  0% {
+    transform: translateY(-10vh) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) rotate(720deg);
+    opacity: 0.65;
+  }
+}
+
+#confettiLayer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10000;
+  overflow: hidden;
+}
+
+.confetti-piece {
+  position: absolute;
+  top: -5vh;
+  animation-name: confettiFall;
+  animation-timing-function: cubic-bezier(0.2, 0.6, 0.4, 1);
+  animation-iteration-count: 1;
+  animation-fill-mode: forwards;
+}
+
+/* ---------- Auth ambient floating particles (CSS-only) ---------- */
+@keyframes floatParticle {
+  0% {
+    transform: translateY(0) translateX(0) scale(1);
+    opacity: 0;
+  }
+  15% { opacity: 0.7; }
+  50% { transform: translateY(-28vh) translateX(3vw) scale(1.1); }
+  85% { opacity: 0.6; }
+  100% {
+    transform: translateY(-56vh) translateX(-2vw) scale(0.9);
+    opacity: 0;
+  }
+}
+
+.particle {
+  position: absolute;
+  bottom: -12vh;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.9), rgba(16, 185, 129, 0.25));
+  animation: floatParticle linear infinite;
+  will-change: transform, opacity;
+}
+
+/* ---------- Modal content stagger ---------- */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Empty state pop ---------- */
+@keyframes popIn {
+  0% { transform: scale(0.7); opacity: 0; }
+  70% { transform: scale(1.06); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.empty-illustration {
+  animation: popIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ---------- Scroll-top FAB ---------- */
+@keyframes fabIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.9); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.scroll-top-fab.show {
+  animation: fabIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

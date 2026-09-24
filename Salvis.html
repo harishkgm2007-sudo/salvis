@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Salvis — target-driven smart savings vaults. Set a goal, automate deposits, and track growth in real time.">
+  <meta name="theme-color" content="#0f172a">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Salvis | Target-Driven Smart Savings Platform">
+  <meta property="og:description" content="Save smarter with goal-driven vaults, automated schedules, and live growth analytics.">
+  <meta name="twitter:card" content="summary">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%A6%3C/text%3E%3C/svg%3E">
+  <title>Salvis | Target-Driven Smart Savings Platform</title>
+
+  <!-- PWA Manifest & Theme -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="application-name" content="Salvis">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Salvis">
+
+  <!-- Google Font: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- CSS System -->
+
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/animations.css">
+
+  <!-- Official Google Identity Services SDK -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+
+  <!-- AUTHENTICATION VIEW SCREEN -->
+  <div class="auth-wrapper" id="authWrapper" style="display: flex;">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <div class="auth-brand-icon">🏦</div>
+        <span>Salvis</span>
+      </div>
+
+      <div class="auth-subtitle">Target-Driven Smart Savings & Vault Management</div>
+
+      <!-- Standard Login / Google Auth View -->
+      <div id="authDefaultLoginView">
+        <!-- Container for Official Google GIS Rendered Button (Centered) -->
+        <div id="googleGsiBtnContainer" style="margin-bottom: 1.25rem; min-height: 44px; display: flex; justify-content: center; align-items: center; width: 100%;">
+          <button type="button" onclick="window.triggerGoogleSignIn()" style="width: 100%; max-width: 320px; height: 44px; background: #ffffff; color: #3c4043; border: 1px solid #dadce0; border-radius: 4px; font-family: 'Roboto', 'Google Sans', sans-serif; font-size: 14px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 12px; cursor: pointer; box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3); transition: background-color 0.2s, box-shadow 0.2s;">
+            <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+              <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.616z"/>
+              <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
+              <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/>
+              <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z"/>
+            </svg>
+            <span>Sign in with Google</span>
+          </button>
+        </div>
+
+        <!-- Divider -->
+        <div id="authDivider" style="display: flex; align-items: center; margin: 1rem 0; color: var(--text-muted); font-size: 0.8rem;">
+          <div style="flex: 1; border-bottom: 1px solid var(--border-color);"></div>
+          <span style="padding: 0 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">or sign in with password</span>
+          <div style="flex: 1; border-bottom: 1px solid var(--border-color);"></div>
+        </div>
+
+        <div id="loginBox">
+          <form id="loginForm" onsubmit="event.preventDefault(); window.loginWithPassword(event);">
+            <div class="form-group">
+              <label class="form-label">Email, Phone Number, or Salvis ID</label>
+              <input type="text" id="loginEmail" class="form-input" placeholder="e.g. 9384108190 or harish.kgm2007@gmail.com" required oninput="window.clearInputError('loginEmail', 'loginEmailError')">
+              <div id="loginEmailError" class="input-error-msg" style="display: none; color: #ef4444; font-size: 0.8rem; font-weight: 600; margin-top: 0.35rem; align-items: center; gap: 0.3rem;"></div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Password</label>
+              <div style="position: relative; width: 100%;">
+                <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" required style="padding-right: 2.75rem;" oninput="window.clearInputError('loginPassword', 'loginPasswordError')">
+                <button type="button" onclick="window.togglePasswordVisibility('loginPassword', this)" title="Show/Hide Password" style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 1.1rem; cursor: pointer; color: var(--text-muted); opacity: 0.8; transition: opacity 0.2s; padding: 0.2rem; display: flex; align-items: center; justify-content: center; z-index: 10;">👁️</button>
+              </div>
+              <div id="loginPasswordError" class="input-error-msg" style="display: none; color: #ef4444; font-size: 0.8rem; font-weight: 600; margin-top: 0.35rem; align-items: center; gap: 0.3rem;"></div>
+            </div>
+
+            <button type="button" id="loginSubmitBtn" class="btn btn-primary btn-full" onclick="window.loginWithPassword(event)">
+              Log In to Salvis 🔒
+            </button>
+          </form>
+
+          <div style="margin-top: 1rem; font-size: 0.85rem;">
+            <a href="#" id="btnToggleAuthMode" style="color: var(--brand-blue); font-weight: 600; text-decoration: none;">Don't have an account? Sign Up</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Signup Form Box -->
+      <div id="signupBox" style="display: none;">
+        <form id="signupForm">
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input type="text" id="signupName" class="form-input" placeholder="Sarah Connor" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input type="email" id="signupEmail" class="form-input" placeholder="sarah@example.com" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Password</label>
+              <div style="position: relative; width: 100%;">
+                <input type="password" id="signupPassword" class="form-input" placeholder="••••••••" required style="padding-right: 2.5rem;">
+                <button type="button" onclick="window.togglePasswordVisibility('signupPassword', this)" title="Show/Hide Password" style="position: absolute; right: 0.6rem; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 1.1rem; cursor: pointer; color: var(--text-muted); opacity: 0.8; transition: opacity 0.2s; padding: 0.2rem; display: flex; align-items: center; justify-content: center; z-index: 10;">👁️</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Security PIN (4-Digits)</label>
+              <input type="password" id="signupPin" class="form-input" maxlength="4" placeholder="1234" required>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-emerald btn-full">
+            Create Account & Vault 🚀
+          </button>
+        </form>
+      </div>
+
+      <!-- Existing User Passkey Verification Box (Old User Flow) -->
+      <div id="existingUserPasskeyBox" style="display: none; text-align: left;">
+        <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 1.25rem;">
+          <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem;">
+            <div id="existingUserAvatar" style="width: 52px; height: 52px; border-radius: 50%; background: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden; border: 2px solid var(--accent-emerald);">👋</div>
+            <div>
+              <div id="existingUserName" style="font-weight: 700; font-size: 1.05rem; color: var(--text-primary);">Returning User</div>
+              <div id="existingUserEmail" style="font-size: 0.85rem; color: var(--text-secondary);">user@example.com</div>
+              <div id="existingUserSalvisId" style="font-size: 0.75rem; font-weight: 700; color: var(--brand-blue); margin-top: 0.2rem;">ID: SALVIS-XXXXXX</div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: var(--accent-emerald); font-weight: 600;">
+            <span>✓ Verified Account Found in Salvis Database</span>
+          </div>
+        </div>
+
+        <form id="existingUserPasskeyForm" onsubmit="window.submitExistingUserPasskey(event)">
+          <div class="form-group">
+            <label class="form-label">Enter 4-Digit Passkey</label>
+            <input type="password" id="existingUserPasskeyInput" class="form-input" maxlength="4" placeholder="••••" required autofocus style="text-align: center; font-size: 1.5rem; letter-spacing: 0.5rem;" oninput="window.clearInputError('existingUserPasskeyInput', 'existingPasskeyErrorMsg')">
+            <div class="input-error-msg" id="existingPasskeyErrorMsg" style="display: none; justify-content: center;"></div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-full" style="margin-top: 1rem;">
+            Unlock Salvis Vault 🔑
+          </button>
+        </form>
+
+        <div style="text-align: center; margin-top: 1rem;">
+          <a href="#" onclick="window.showAuthLoginView()" style="font-size: 0.85rem; color: var(--text-muted); text-decoration: underline;">Switch Account / Back</a>
+        </div>
+      </div>
+
+      <!-- New User Passkey Creation Box (New User Flow) -->
+      <div id="newUserPasskeyBox" style="display: none; text-align: left;">
+        <div style="background: rgba(66, 133, 244, 0.08); border: 1px solid rgba(66, 133, 244, 0.25); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 1.25rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+            <div style="font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #1a73e8;">New Salvis Account</div>
+            <div id="newSalvisIdBadge" style="background: #1a73e8; color: #ffffff; padding: 0.25rem 0.6rem; border-radius: var(--radius-sm); font-size: 0.75rem; font-weight: 800; letter-spacing: 0.05em;">SALVIS-849201</div>
+          </div>
+          
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <div id="newUserAvatar" style="width: 48px; height: 48px; border-radius: 50%; background: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden; border: 2px solid #4285F4;">🌐</div>
+            <div>
+              <div id="newUserName" style="font-weight: 700; font-size: 1.05rem; color: var(--text-primary);">New Savings User</div>
+              <div id="newUserEmail" style="font-size: 0.85rem; color: var(--text-secondary);">newuser@example.com</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 1.25rem; background: var(--bg-tertiary); padding: 0.85rem 1rem; border-radius: var(--radius-sm); border: 1px dashed var(--border-color); display: flex; align-items: center; justify-content: space-between;">
+          <div>
+            <label style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 700; display: block;">Region & Currency</label>
+            <div id="newUserRegionBadge" style="font-size: 0.9rem; font-weight: 800; color: var(--brand-emerald);">India 🇮🇳 (INR ₹)</div>
+          </div>
+          <span style="font-size: 1.2rem;">🌍</span>
+        </div>
+
+        <form id="newUserPasskeyForm" onsubmit="window.submitNewUserPasskey(event)">
+          <div class="form-group" style="margin-bottom: 0.85rem;">
+            <label class="form-label">Phone Number (For Recovery & SMS Alerts)</label>
+            <input type="tel" id="newUserPhoneInput" class="form-input" placeholder="+1 (555) 234-5678" required>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0.85rem;">
+            <label class="form-label">Create Password (For Manual Login Without Google)</label>
+            <div style="position: relative; width: 100%;">
+              <input type="password" id="newUserPasswordInput" class="form-input" placeholder="••••••••" required minlength="6" style="padding-right: 2.75rem;">
+              <button type="button" onclick="window.togglePasswordVisibility('newUserPasswordInput', this)" title="Show/Hide Password" style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 1.1rem; cursor: pointer; color: var(--text-muted); opacity: 0.8; transition: opacity 0.2s; padding: 0.2rem; display: flex; align-items: center; justify-content: center; z-index: 10;">👁️</button>
+            </div>
+            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.2rem;">Use this password to log in manually using Email, Phone, or Salvis ID.</div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label class="form-label">Create 4-Digit Security Passkey</label>
+            <input type="password" id="newUserPasskeyInput" class="form-input" maxlength="4" placeholder="••••" required style="text-align: center; font-size: 1.4rem; letter-spacing: 0.4rem;">
+            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.2rem;">Used for quick vault unlocking & high-risk withdrawal authorization.</div>
+          </div>
+
+          <button type="submit" class="btn btn-emerald btn-full" style="margin-top: 0.75rem;">
+            Create Salvis Account & Launch Vault 🚀
+          </button>
+        </form>
+
+        <div style="text-align: center; margin-top: 1rem;">
+          <a href="#" onclick="window.showAuthLoginView()" style="font-size: 0.85rem; color: var(--text-muted); text-decoration: underline;">Cancel / Back to Login</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ambient floating particles (CSS-only) -->
+    <div class="particle" style="left: 12%; width: 10px; height: 10px; animation-duration: 14s; animation-delay: 0s;"></div>
+    <div class="particle" style="left: 28%; width: 6px; height: 6px; animation-duration: 18s; animation-delay: 2s;"></div>
+    <div class="particle" style="left: 47%; width: 12px; height: 12px; animation-duration: 16s; animation-delay: 4s;"></div>
+    <div class="particle" style="left: 63%; width: 7px; height: 7px; animation-duration: 20s; animation-delay: 1s;"></div>
+    <div class="particle" style="left: 78%; width: 9px; height: 9px; animation-duration: 15s; animation-delay: 3s;"></div>
+    <div class="particle" style="left: 90%; width: 5px; height: 5px; animation-duration: 22s; animation-delay: 5s;"></div>
+  </div>
+
+
+  <!-- MAIN APP VIEW WRAPPER -->
+  <div class="app-wrapper" id="mainAppWrapper" style="display: none;">
+    <!-- Navbar Header -->
+    <nav class="navbar">
+      <button type="button" class="nav-menu-toggle" id="navMenuToggle" title="Menu">☰</button>
+
+      <a href="#" class="nav-brand">
+        <div class="brand-icon">🏦</div>
+        <span>Salvis</span>
+      </a>
+
+      <div class="nav-actions" id="navActions">
+        <div class="wallet-badge">
+          <span>💼 Wallet Ledger:</span>
+          <span class="wallet-amount" id="walletBalanceDisplay">$0.00</span>
+        </div>
+
+        <div class="user-profile-badge" onclick="window.openProfilePage()" style="cursor: pointer;" title="View Profile & Settings">
+          <span id="userAvatarDisplay">👨‍💼</span>
+          <span id="userNameDisplay">Alex Mercer</span>
+        </div>
+
+        <button class="btn btn-secondary btn-sm" id="btnViewLedger">
+          📜 History
+        </button>
+
+        <button class="btn btn-primary btn-sm" id="btnCreateGoal">
+          + New Vault
+        </button>
+
+        <button class="btn btn-danger btn-sm" id="btnLogout" onclick="window.logoutUser()" title="Log out session">
+          🚪 Logout
+        </button>
+      </div>
+
+      <div class="widget-row">
+        <!-- Notification Bell + Panel -->
+        <div class="notif-wrap">
+          <button type="button" class="notif-bell" id="btnNotifications" title="Notifications">
+            🔔
+            <span class="notification-badge" id="notificationBadge"></span>
+          </button>
+          <div class="notification-panel" id="notificationPanel"></div>
+        </div>
+
+        <!-- Theme Toggle Widget (Light / Dark Mode) -->
+        <button type="button" class="theme-toggle-btn" id="btnToggleTheme" onclick="window.toggleAppTheme()" title="Toggle Dark/Light Mode">
+          <span class="theme-toggle-icon" id="themeToggleIcon">🌙</span>
+          <span id="themeToggleLabel">Dark</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Executive Metrics Row -->
+    <div class="metrics-row" style="margin-bottom: 2rem;">
+      <div class="metric-card">
+        <div class="metric-label">Total Cumulative Saved</div>
+        <div class="metric-value" id="metricTotalSaved">$0.00</div>
+        <div class="metric-subtext positive">▲ Across all active savings vaults</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-label">Overall Completion Rate</div>
+        <div class="metric-value" id="metricOverallPct">0%</div>
+        <div class="metric-subtext">Weighted goal trajectory</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-label">Active Savings Vaults</div>
+        <div class="metric-value" id="metricActiveGoals">0</div>
+        <div class="metric-subtext">Target-driven commitments</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-label">Monthly Savings Velocity</div>
+        <div class="metric-value" id="metricVelocity">$0.00/mo</div>
+        <div class="metric-subtext positive">Scheduled recurring deposits</div>
+      </div>
+    </div>
+
+    <!-- Content Split Layout -->
+    <div class="main-content-split">
+      <!-- Left Column: Vault Cards Grid -->
+      <div>
+        <div class="section-header">
+          <div class="section-title">
+            <span>🎯 Savings Vaults</span>
+          </div>
+
+          <div class="filter-tabs">
+            <button class="tab-btn active" data-filter="all">All</button>
+            <button class="tab-btn" data-filter="active">Active</button>
+            <button class="tab-btn" data-filter="paused">Paused</button>
+            <button class="tab-btn" data-filter="completed">Completed</button>
+          </div>
+        </div>
+
+        <div class="vault-toolbar">
+          <div class="toolbar-search">
+            <span class="toolbar-search-icon">🔍</span>
+            <input type="text" id="vaultSearchInput" placeholder="Search vaults by name, category or status..." aria-label="Search vaults">
+          </div>
+          <div class="toolbar-sort">
+            <select id="vaultSortSelect" aria-label="Sort vaults">
+              <option value="recent">Sort: Recent</option>
+              <option value="progress">Sort: Progress</option>
+              <option value="amount">Sort: Target Amount</option>
+              <option value="date">Sort: Target Date</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="goals-grid" id="goalsGrid">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- Right Column: Trajectory Chart & Trust Badges -->
+      <div>
+        <div class="section-header">
+          <div class="section-title">
+            <span>📈 Growth Trajectory</span>
+          </div>
+        </div>
+
+        <div class="metric-card" style="margin-bottom: 1.25rem; height: 310px;">
+          <canvas id="trajectoryCanvas" style="width: 100%; height: 100%;"></canvas>
+        </div>
+
+        <!-- Trust & Security Card -->
+        <div class="metric-card" style="background: var(--bg-subtle);">
+          <div style="display: flex; gap: 0.75rem; align-items: flex-start;">
+            <div style="font-size: 1.4rem;">🔒</div>
+            <div>
+              <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--brand-navy); margin-bottom: 0.2rem;">256-Bit Encrypted Security</h4>
+              <p style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.4;">
+                All high-risk actions (early withdrawals, fund reallocations) are protected with 4-digit Security PIN authorization.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Advanced Analytics Section (Donut / Velocity / Health) -->
+    <div class="analytics-section" style="margin-top: 2.5rem;">
+      <div class="section-header">
+        <div class="section-title">
+          <span>📊 Advanced Analytics</span>
+        </div>
+      </div>
+
+      <div class="analytics-grid">
+        <!-- Category Allocation Donut -->
+        <div class="metric-card analytics-card">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+            <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--brand-navy); margin: 0;">🍩 Category Allocation</h4>
+            <span style="font-size: 0.72rem; color: var(--text-muted);">Saved amount by category</span>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas id="donutCanvas"></canvas>
+          </div>
+          <div id="donutLegend" class="donut-legend"></div>
+        </div>
+
+        <!-- Monthly Velocity Bar -->
+        <div class="metric-card analytics-card">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+            <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--brand-navy); margin: 0;">📅 Monthly Velocity</h4>
+            <span style="font-size: 0.72rem; color: var(--text-muted);">Target vs actual deposits</span>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas id="velocityCanvas"></canvas>
+          </div>
+        </div>
+
+        <!-- Financial Health Score -->
+        <div class="metric-card analytics-card">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+            <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--brand-navy); margin: 0;">💚 Salvis Health Score</h4>
+            <span style="font-size: 0.72rem; color: var(--text-muted);">Pace · Cadence · Reserve</span>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas id="healthScoreCanvas"></canvas>
+          </div>
+          <div id="healthScoreDetail" class="health-breakdown"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEDICATED USER PROFILE VIEW PAGE -->
+  <div class="app-wrapper" id="profileAppWrapper" style="display: none;">
+    <!-- Profile Page Navbar Header -->
+    <nav class="navbar">
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="window.openDashboardPage()">
+          ⬅️ Back to Savings Dashboard
+        </button>
+        <a href="#" class="nav-brand" onclick="window.openDashboardPage()">
+          <div class="brand-icon">🏦</div>
+          <span>Salvis</span>
+        </a>
+
+      </div>
+
+      <div class="nav-actions">
+        <button type="button" class="theme-toggle-btn" onclick="window.toggleAppTheme()" title="Toggle Dark/Light Mode">
+          <span class="theme-toggle-icon">🌙</span>
+          <span>Theme</span>
+        </button>
+        <button class="btn btn-danger btn-sm" onclick="window.logoutUser()">
+          🚪 Logout
+        </button>
+      </div>
+    </nav>
+
+    <!-- Profile Dashboard Grid -->
+    <div style="display: grid; grid-template-columns: minmax(280px, 340px) 1fr; gap: 1.5rem; margin-top: 1rem; align-items: start;">
+      
+      <!-- Left Column: User Profile Header Card (Static / Fixed on Left) -->
+      <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-xl); padding: 2rem 1.5rem; text-align: center; box-shadow: var(--shadow-sm); height: fit-content; position: sticky; top: 5.5rem;">
+        
+        <!-- Changeable Profile Picture (Select from Media) -->
+        <div style="position: relative; width: 120px; height: 120px; margin: 0 auto 1.25rem auto;">
+          <div id="profileImageDisplay" style="width: 120px; height: 120px; border-radius: 50%; background: var(--bg-subtle); border: 3px solid var(--brand-blue); display: flex; align-items: center; justify-content: center; font-size: 3.5rem; overflow: hidden; background-size: cover; background-position: center; box-shadow: var(--shadow-md);">
+            👨‍💼
+          </div>
+          <button type="button" onclick="document.getElementById('profileAvatarFileInput').click()" style="position: absolute; bottom: 4px; right: 4px; background: var(--brand-blue); color: white; border: 2px solid var(--bg-secondary); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1rem; box-shadow: var(--shadow-sm);" title="Select photo from media device">
+            📷
+          </button>
+          <input type="file" id="profileAvatarFileInput" accept="image/*" style="display: none;" onchange="window.handleAvatarFileUpload(event)">
+        </div>
+
+        <!-- Left Top Corner User Name & Phone Number Detail Card -->
+        <div style="text-align: left; background: var(--bg-subtle); padding: 1.25rem; border-radius: var(--radius-lg); border: 1px solid var(--border-color); margin-bottom: 0; position: relative;">
+          <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
+            <span>USER ACCOUNT PROFILE</span>
+          </div>
+          
+          <!-- Normal Display Mode -->
+          <div id="profileCardDisplayMode">
+            <!-- Full Name -->
+            <div style="font-size: 1.15rem; font-weight: 800; color: var(--brand-navy); padding: 0.15rem 0;">
+              <span id="profileViewNameDisplay">Alex Mercer</span>
+            </div>
+
+            <!-- Username / Nickname (Single Clean Edit Button) -->
+            <div onclick="window.openInlineProfileEdit()" style="font-size: 0.88rem; color: var(--brand-blue); font-weight: 700; margin-top: 0.25rem; cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 0.15rem 0;" title="Click to edit nickname">
+              <div style="display: flex; align-items: center; gap: 0.4rem;">
+                <span style="color: var(--text-secondary); font-weight: 500;">Username:</span>
+                <strong id="profileViewNicknameDisplay">@alex_saver</strong>
+              </div>
+              <span style="font-size: 0.8rem; color: var(--brand-blue); font-weight: 600;">✏️ Edit</span>
+            </div>
+
+            <!-- Phone Number -->
+            <div style="font-size: 0.88rem; color: var(--text-secondary); margin-top: 0.25rem; padding: 0.15rem 0;">
+              <div style="display: flex; align-items: center; gap: 0.4rem;">
+                <span>📞 Phone:</span>
+                <strong id="profileViewPhoneDisplay" style="color: var(--brand-navy);">+1 (555) 234-5678</strong>
+              </div>
+            </div>
+
+            <!-- Email -->
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem; display: flex; align-items: center; gap: 0.4rem;">
+              <span>✉️ Email:</span>
+              <span id="profileViewEmailDisplay">alex@salvis.com</span>
+
+            </div>
+
+            <!-- Detected Region & Currency -->
+            <div style="font-size: 0.8rem; color: var(--brand-blue); margin-top: 0.5rem; display: flex; align-items: center; gap: 0.4rem; font-weight: 700; background: var(--bg-primary); padding: 0.45rem 0.6rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+              <span>🌐 Region & Currency:</span>
+              <span id="profileViewRegionDisplay">United States 🇺🇸 (USD $)</span>
+            </div>
+          </div>
+
+          <!-- Inline Edit Bar Mode (Nickname Only) -->
+          <div id="profileCardEditBarMode" style="display: none; margin-top: 0.5rem;">
+            <div class="form-group" style="margin-bottom: 0.85rem;">
+              <label class="form-label" style="font-size: 0.75rem; font-weight: 700; color: var(--brand-navy);">Edit Username / Nickname</label>
+              <input type="text" id="inlineEditNicknameInput" class="form-input" placeholder="e.g. @alex_saver" style="padding: 0.55rem 0.75rem; font-size: 0.9rem;">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0.85rem;">
+              <label class="form-label" style="font-size: 0.75rem; font-weight: 700; color: var(--brand-navy);">Edit Full Name</label>
+              <input type="text" id="inlineEditLegalNameInput" class="form-input" placeholder="e.g. Alex Mercer" style="padding: 0.55rem 0.75rem; font-size: 0.9rem;">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0.85rem;">
+              <label class="form-label" style="font-size: 0.75rem; font-weight: 700; color: var(--brand-navy);">Edit Phone Number</label>
+              <input type="tel" id="inlineEditPhoneInput" class="form-input" placeholder="+1 (555) 234-5678" style="padding: 0.55rem 0.75rem; font-size: 0.9rem;">
+            </div>
+
+            <div style="display: flex; gap: 0.5rem;">
+              <button type="button" class="btn btn-emerald btn-sm" onclick="window.saveInlineProfile()" style="flex: 1;">
+                💾 Save Profile
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="window.closeInlineProfileEdit()">
+                Cancel
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Right Column: Interactive Profile Options Stack (Dynamic & Scrollable) -->
+      <div style="display: flex; flex-direction: column; gap: 1.25rem; min-width: 0;">
+
+        
+        <!-- OPTION 1: Adding Bank Account Option -->
+        <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-xl); padding: 1.5rem; box-shadow: var(--shadow-sm);">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <div style="font-size: 1.6rem;">🏦</div>
+              <div>
+                <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--brand-navy);">Adding Bank Account</h3>
+                <p style="font-size: 0.8rem; color: var(--text-secondary);">Connect bank accounts for automated deposit transfers</p>
+              </div>
+            </div>
+            <button type="button" class="btn btn-emerald btn-sm" onclick="window.openAddBankModal()">
+              + Add Bank Account
+            </button>
+          </div>
+
+          <div id="bankAccountsContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;">
+            <!-- Rendered Dynamically -->
+          </div>
+        </div>
+
+        <!-- OPTION 2: Settings Option -->
+        <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-xl); padding: 1.5rem; box-shadow: var(--shadow-sm);">
+          <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+            <div style="font-size: 1.6rem;">⚙️</div>
+            <div>
+              <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--brand-navy);">Settings Option</h3>
+              <p style="font-size: 0.8rem; color: var(--text-secondary);">Security PIN, notifications, and default preferences</p>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem;">
+            <div style="background: var(--bg-subtle); padding: 1rem; border-radius: var(--radius-lg); border: 1px solid var(--border-color);">
+              <div style="font-size: 0.85rem; font-weight: 700; color: var(--brand-navy); margin-bottom: 0.35rem;">Security PIN Authorization</div>
+              <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.75rem;">Change 4-digit PIN for high-risk withdrawals</p>
+              <button type="button" class="btn btn-primary btn-sm" id="btnOpenChangePinModal" onclick="window.openChangePinModal()" style="margin-bottom: 0.5rem;">Change PIN 🔒</button>
+
+              <!-- Inline Change PIN Redirection Panel -->
+              <div id="pinChangeInlinePanel" style="display: none; margin-top: 0.85rem; padding: 1rem; background: var(--bg-primary); border: 1px solid var(--brand-blue); border-radius: var(--radius-md); text-align: left;">
+                <!-- Step 1: Verify Current PIN -->
+                <div id="inlinePinStep1">
+                  <div style="font-weight: 700; font-size: 0.85rem; color: var(--brand-navy); margin-bottom: 0.25rem;">🔑 Verify Current PIN</div>
+                  <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.75rem;">Enter your current 4-digit PIN to authorize change.</p>
+                  <form onsubmit="window.verifyCurrentPinInline(event)">
+                    <input type="password" id="inlineCurrentPinInput" class="form-input" maxlength="4" placeholder="••••" required style="text-align: center; font-size: 1.2rem; letter-spacing: 0.4rem; margin-bottom: 0.5rem;" oninput="window.clearInputError('inlineCurrentPinInput', 'inlineCurrentPinErrorMsg')">
+                    <div class="input-error-msg" id="inlineCurrentPinErrorMsg" style="display: none; margin-bottom: 0.75rem;"></div>
+                    <div style="display: flex; gap: 0.5rem;">
+                      <button type="submit" class="btn btn-primary btn-sm" style="flex: 1;">Verify & Continue ➡️</button>
+                      <button type="button" class="btn btn-secondary btn-sm" onclick="window.closeInlinePinPanel()">Cancel</button>
+                    </div>
+                  </form>
+                </div>
+
+                <!-- Step 2: Set New PIN -->
+                <div id="inlinePinStep2" style="display: none;">
+                  <div style="font-weight: 700; font-size: 0.85rem; color: var(--brand-navy); margin-bottom: 0.25rem;">🔐 Set New 4-Digit PIN</div>
+                  <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.75rem;">Create and confirm your new Security PIN.</p>
+                  <form onsubmit="window.submitNewPinInline(event)">
+                    <div style="margin-bottom: 0.5rem;">
+                      <label style="font-size: 0.7rem; color: var(--text-secondary); display: block; margin-bottom: 0.2rem;">New 4-Digit PIN</label>
+                      <input type="password" id="inlineNewPinInput" class="form-input" maxlength="4" placeholder="••••" required style="text-align: center; font-size: 1.2rem; letter-spacing: 0.4rem;">
+                    </div>
+                    <div style="margin-bottom: 0.75rem;">
+                      <label style="font-size: 0.7rem; color: var(--text-secondary); display: block; margin-bottom: 0.2rem;">Confirm New PIN</label>
+                      <input type="password" id="inlineConfirmPinInput" class="form-input" maxlength="4" placeholder="••••" required style="text-align: center; font-size: 1.2rem; letter-spacing: 0.4rem;">
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                      <button type="submit" class="btn btn-emerald btn-sm" style="flex: 1;">Confirm & Update PIN 💾</button>
+                      <button type="button" class="btn btn-secondary btn-sm" onclick="window.closeInlinePinPanel()">Cancel</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+
+            <div style="background: var(--bg-subtle); padding: 1rem; border-radius: var(--radius-lg); border: 1px solid var(--border-color);">
+              <div style="font-size: 0.85rem; font-weight: 700; color: var(--brand-navy); margin-bottom: 0.35rem;">SMS & Email Alerts</div>
+              <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.75rem;">Receive instant deposit receipts & reminders</p>
+              <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; font-weight: 600; cursor: pointer;">
+                <input type="checkbox" checked id="chkSMSAlerts"> Enable SMS Alerts
+              </label>
+            </div>
+
+            <div style="background: var(--bg-subtle); padding: 1rem; border-radius: var(--radius-lg); border: 1px solid var(--border-color);">
+              <div style="font-size: 0.85rem; font-weight: 700; color: var(--brand-navy); margin-bottom: 0.35rem;">Base Currency</div>
+              <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Auto-detected from Google / Region</p>
+              <div id="staticUserCurrencyDisplay" style="background: var(--bg-primary); border: 1px solid var(--border-color); padding: 0.55rem 0.75rem; border-radius: var(--radius-md); font-size: 0.85rem; font-weight: 700; color: var(--brand-navy);">
+                <span id="staticCurrencyText">India 🇮🇳 (INR ₹)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- OPTION 3: Manage Profiles Option -->
+        <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-xl); padding: 1.5rem; box-shadow: var(--shadow-sm);">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <div style="font-size: 1.6rem;">👥</div>
+              <div>
+                <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--brand-navy);">Manage Profiles Option</h3>
+                <p style="font-size: 0.8rem; color: var(--text-secondary);">Switch between Personal, Family, and Joint vaults</p>
+              </div>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="window.openAddProfileModal()">
+              + New Profile
+            </button>
+          </div>
+
+          <div id="manageProfilesContainer" style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+            <!-- Rendered Dynamically -->
+          </div>
+        </div>
+
+        <!-- OPTION 4: Database Backup & Restore Option -->
+        <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-xl); padding: 1.5rem; box-shadow: var(--shadow-sm);">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <div style="font-size: 1.6rem;">💾</div>
+              <div>
+                <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--brand-navy);">Database Backup & Restore</h3>
+                <p style="font-size: 0.8rem; color: var(--text-secondary);">Export your full vault database or rehydrate from a previous backup</p>
+              </div>
+            </div>
+          </div>
+
+          <div style="background: var(--bg-subtle); padding: 1rem; border-radius: var(--radius-lg); border: 1px solid var(--border-color);">
+            <p style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 1rem;">
+              Backups contain every goal, transaction, linked account, sub-profile, and account preference stored on this device. Download a structured <strong>JSON</strong> snapshot to keep as a safety net.
+            </p>
+            <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+              <button type="button" class="btn btn-primary btn-sm" id="btnExportBackup" onclick="window.UIRenderer.downloadDatabaseBackup()">
+                ⬇️ Export Full Backup
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btnImportBackup" onclick="window.UIRenderer.openBackupImportPicker()">
+                ⬆️ Restore From Backup
+              </button>
+            </div>
+            <input type="file" id="backupRestoreFileInput" accept=".json,application/json" style="display: none;" onchange="window.UIRenderer.handleBackupRestoreFile(event)">
+          </div>
+        </div>
+
+        <!-- OPTION 5: Logout Account Option -->
+        <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-xl); padding: 1.5rem; box-shadow: var(--shadow-sm);">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <div style="font-size: 1.6rem;">🚪</div>
+              <div>
+                <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--accent-rose);">Logout Account Option</h3>
+                <p style="font-size: 0.8rem; color: var(--text-secondary);">End active session and return to authentication page</p>
+              </div>
+            </div>
+            <button type="button" class="btn btn-danger" onclick="window.logoutUser()">
+              Logout Account 🚪
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Scroll-to-Top Floating Action Button -->
+  <button class="scroll-top-fab" id="scrollTopFab" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+  <!-- Toast Notifications Container -->
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- MODAL: Security PIN Keypad -->
+  <div class="modal-overlay" id="pinModal">
+    <div class="modal-container" style="max-width: 360px; text-align: center;">
+      <div class="modal-header" style="justify-content: center;">
+        <div class="modal-title">🔒 Enter 4-Digit Security PIN</div>
+      </div>
+      <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">
+        Verification required to authorize fund withdrawal or reallocation. <br><small style="color: var(--brand-blue);">(Default Demo PIN: <strong>1234</strong>)</small>
+      </p>
+
+      <div class="pin-display" id="pinDisplay">
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+      </div>
+
+      <div class="pin-keypad">
+        <button class="keypad-btn" data-key="1">1</button>
+        <button class="keypad-btn" data-key="2">2</button>
+        <button class="keypad-btn" data-key="3">3</button>
+        <button class="keypad-btn" data-key="4">4</button>
+        <button class="keypad-btn" data-key="5">5</button>
+        <button class="keypad-btn" data-key="6">6</button>
+        <button class="keypad-btn" data-key="7">7</button>
+        <button class="keypad-btn" data-key="8">8</button>
+        <button class="keypad-btn" data-key="9">9</button>
+        <button class="keypad-btn" data-key="clear">C</button>
+        <button class="keypad-btn" data-key="0">0</button>
+        <button class="keypad-btn" data-key="back">⌫</button>
+      </div>
+
+      <button class="btn btn-secondary btn-full" onclick="window.UIRenderer.closeModal('pinModal')" style="margin-top: 1.25rem;">
+        Cancel
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL: Goal Creation Wizard -->
+  <div class="modal-overlay" id="wizardModal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <div class="modal-title">Create Smart Savings Vault</div>
+        <button class="close-btn" onclick="window.UIRenderer.closeModal('wizardModal')">&times;</button>
+      </div>
+
+      <div class="wizard-steps">
+        <div class="wizard-step-node active">1</div>
+        <div class="wizard-step-node">2</div>
+      </div>
+
+      <div id="wizardContent">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Goal Control & Actions -->
+  <div class="modal-overlay" id="goalDetailModal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <div class="modal-title">Vault Controls & Financial Settings</div>
+        <button class="close-btn" onclick="window.UIRenderer.closeModal('goalDetailModal')">&times;</button>
+      </div>
+      <div id="goalDetailBody">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Edit Vault -->
+  <div class="modal-overlay" id="editGoalModal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <div class="modal-title">✏️ Edit Savings Vault</div>
+        <button class="close-btn" onclick="window.UIRenderer.closeModal('editGoalModal')">&times;</button>
+      </div>
+      <div id="editGoalBody">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Destructive Action Confirmation -->
+  <div class="modal-overlay" id="confirmModal">
+    <div class="modal-container" style="max-width: 420px; text-align: center;">
+      <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">⚠️</div>
+      <div class="modal-title" style="margin-bottom: 0.75rem;">Are you sure?</div>
+      <div id="confirmBody"></div>
+      <div class="detail-edit-row" style="margin-top: 1.5rem; margin-bottom: 0;">
+        <button class="btn btn-secondary btn-full" id="confirmCancelBtn">Cancel</button>
+        <button class="btn btn-danger btn-full" id="confirmProceedBtn">Yes, Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Reallocate Funds -->
+  <div class="modal-overlay" id="reallocateModal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <div class="modal-title">🔄 Reallocate Vault Funds</div>
+        <button class="close-btn" onclick="window.UIRenderer.closeModal('reallocateModal')">&times;</button>
+      </div>
+      <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+        Transfer your accumulated <strong id="reallocateSourceAmount" style="color: var(--accent-emerald);">$0.00</strong> into another active target vault without breaking your savings momentum.
+      </div>
+      <div class="form-group">
+        <label class="form-label">Select Destination Vault</label>
+        <select id="reallocateTargetSelect" class="form-select"></select>
+      </div>
+      <button class="btn btn-primary btn-full" id="btnConfirmReallocate" style="margin-top: 1rem;">
+        Confirm Reallocation 🚀
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL: Payment Sandbox -->
+  <div class="modal-overlay" id="paymentModal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <div class="modal-title">⚡ Payment Gateway Sandbox</div>
+        <button class="close-btn" onclick="window.UIRenderer.closeModal('paymentModal')">&times;</button>
+      </div>
+
+      <div class="alert-box alert-info">
+        <span>ℹ️</span>
+        <div><strong>Test Environment Sandbox</strong><br>Simulate deposit transfers into your savings vault.</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Destination Vault</label>
+        <div id="payGoalName" style="font-weight: 700; font-size: 1.05rem; color: var(--brand-navy);"></div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Deposit Amount ($)</label>
+        <input type="number" id="payAmountInput" class="form-input" value="0">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Payment Method Rail</label>
+        <select id="payMethodSelect" class="form-select">
+          <option>Razorpay Instant UPI</option>
+          <option>Stripe Credit / Debit Card</option>
+          <option>Direct Net Banking Transfer</option>
+          <option>Primary Wallet Balance Ledger</option>
+        </select>
+      </div>
+
+      <button class="btn btn-emerald btn-full" id="btnExecutePayment" style="margin-top: 1rem;">
+        Complete Deposit & Recalculate ⚡
+      </button>
+
+      <!-- Simulated payment processing status / rail output -->
+      <div id="payStatusArea" class="pay-status" style="display: none;"></div>
+    </div>
+  </div>
+
+  <!-- MODAL: 3D Secure Card OTP Verification (Sandbox) -->
+  <div class="modal-overlay" id="otpModal">
+    <div class="modal-container" style="max-width: 380px; text-align: center;">
+      <div class="modal-header">
+        <div class="modal-title">🔐 3D Secure Verification</div>
+        <button class="close-btn" id="btnCancelOtp" onclick="window.UIRenderer.cancelOtpPrompt()">&times;</button>
+      </div>
+      <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+        Your card issuer sent a 6-digit one-time password to your registered mobile number.
+      </p>
+      <p id="otpDemoHint" style="font-size: 0.8rem; font-weight: 700; color: var(--brand-blue); margin-bottom: 1rem;">Demo OTP: —</p>
+
+      <div class="form-group" style="margin-bottom: 1.25rem;">
+        <input type="text" id="otpInput" class="form-input" inputmode="numeric" maxlength="6" placeholder="••••••" autocomplete="one-time-code" style="text-align: center; font-size: 1.5rem; letter-spacing: 0.5rem;">
+      </div>
+
+      <div style="display: flex; gap: 0.5rem;">
+        <button type="button" class="btn btn-emerald btn-full" onclick="window.UIRenderer.verifyCardOtp()">
+          Verify & Charge ✅
+        </button>
+        <button type="button" class="btn btn-secondary btn-full" onclick="window.UIRenderer.cancelOtpPrompt()">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Transaction History -->
+  <div class="modal-overlay" id="ledgerModal">
+    <div class="modal-container" style="max-width: 620px;">
+      <div class="modal-header">
+        <div class="modal-title">📜 Transaction Receipts Ledger</div>
+        <button class="close-btn" onclick="window.UIRenderer.closeModal('ledgerModal')">&times;</button>
+      </div>
+      <div class="ledger-header">
+        <span style="font-size: 0.8rem; color: var(--text-secondary);">All deposits, withdrawals & reallocations</span>
+        <button class="btn btn-secondary btn-sm" id="btnExportLedger" title="Download transaction history as CSV">
+          ⬇️ Export CSV
+        </button>
+      </div>
+      <div class="tx-list" id="ledgerTxList">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Digital Transaction Receipt -->
+  <div class="modal-overlay" id="receiptModal">
+    <div class="modal-container" style="max-width: 480px;">
+      <div class="modal-header">
+        <div class="modal-title">🧾 Digital Transaction Receipt</div>
+        <button class="close-btn" id="btnCloseReceipt">&times;</button>
+      </div>
+      <div id="receiptBody">
+        <!-- Rendered dynamically -->
+      </div>
+      <div style="margin-top: 1.25rem;">
+        <button class="btn btn-secondary btn-full" id="btnPrintReceipt">
+          🖨️ Print Receipt
+        </button>
+      </div>
+      <div style="text-align: center; margin-top: 0.6rem; font-size: 0.72rem; color: var(--text-muted);">
+        Reference: <span id="receiptRefEcho" style="font-family: monospace; font-weight: 700;">—</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Google OAuth Sign-In / Registration -->
+  <div class="modal-overlay" id="googleModal">
+    <div class="modal-container" style="max-width: 440px; padding: 2rem 1.5rem; text-align: center;">
+      <div style="margin-bottom: 1rem; display: flex; justify-content: center;">
+        <svg width="40" height="40" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+        </svg>
+      </div>
+      <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--brand-navy); margin-bottom: 0.25rem;">Sign in with Google</h3>
+      <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.5rem;">Choose an account to continue to <strong>VaultSmart</strong></p>
+
+      <!-- Option 1: 1-Click Fast Google Account -->
+      <div id="btnGoogleAccountDefault" onclick="window.loginWithGoogleFast()" style="display: flex; align-items: center; gap: 1rem; padding: 0.85rem 1rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); cursor: pointer; text-align: left; transition: all 0.2s ease; margin-bottom: 1rem; background: var(--bg-primary);">
+        <div style="width: 42px; height: 42px; border-radius: 50%; background: #4285f4; color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem;">
+          🌐
+        </div>
+        <div style="flex: 1;">
+          <div style="font-weight: 700; color: var(--brand-navy); font-size: 0.95rem;">Google User</div>
+          <div style="font-size: 0.8rem; color: var(--text-secondary);">user.google@gmail.com</div>
+        </div>
+        <span style="font-size: 1.1rem;">➡️</span>
+      </div>
+
+      <div style="display: flex; align-items: center; margin: 1rem 0; color: var(--text-muted); font-size: 0.75rem;">
+        <div style="flex: 1; border-bottom: 1px solid var(--border-color);"></div>
+        <span style="padding: 0 0.5rem; text-transform: uppercase; font-weight: 600;">or register custom Google profile</span>
+        <div style="flex: 1; border-bottom: 1px solid var(--border-color);"></div>
+      </div>
+
+      <!-- Option 2: Register custom Google profile -->
+      <div style="text-align: left;">
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label class="form-label">Your Google Account Name</label>
+          <input type="text" id="googleCustomName" class="form-input" placeholder="e.g. Jordan Lee">
+        </div>
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+          <label class="form-label">Google Email Address</label>
+          <input type="email" id="googleCustomEmail" class="form-input" placeholder="jordan@gmail.com">
+        </div>
+        <button type="button" class="btn btn-emerald btn-full" id="btnGoogleSubmitCustom" onclick="window.loginWithGoogleCustom()">
+          🚀 Authenticate & Launch Dashboard
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL: Add Bank Account -->
+  <div class="modal-overlay" id="addBankModal">
+    <div class="modal-container" style="max-width: 440px;">
+      <div class="modal-header">
+        <div class="modal-title">➕ Add Bank Account</div>
+        <button class="close-btn" onclick="window.UIRenderer.closeModal('addBankModal')">&times;</button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Bank Name</label>
+        <input type="text" id="bankNameInput" class="form-input" placeholder="e.g. Chase Bank, HDFC, Wells Fargo">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Account Number</label>
+        <input type="text" id="bankAccountNumInput" class="form-input" placeholder="1234567890">
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+        <div class="form-group">
+          <label class="form-label">Routing / IFSC Code</label>
+          <input type="text" id="bankRoutingInput" class="form-input" placeholder="CHASUS33">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Account Type</label>
+          <select id="bankTypeSelect" class="form-select">
+            <option>Savings Account</option>
+            <option>Checking Account</option>
+            <option>Salary Account</option>
+          </select>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-emerald btn-full" onclick="window.saveNewBankAccount()" style="margin-top: 1rem;">
+        Link & Save Bank Account 🏦
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL STEP 1: Verify Current PIN -->
+  <div class="modal-overlay" id="verifyCurrentPinModal">
+    <div class="modal-container" style="max-width: 380px; text-align: center;">
+      <div class="modal-header">
+        <div class="modal-title">🔑 Verify Current Passkey / PIN</div>
+        <button class="close-btn" onclick="window.UIRenderer.closeModal('verifyCurrentPinModal')">&times;</button>
+      </div>
+      <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+        Enter your current 4-digit Passkey to authorize Security PIN changes.
+      </p>
+
+      <form id="verifyCurrentPinForm" onsubmit="window.verifyCurrentPin(event)">
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+          <label class="form-label" style="text-align: left;">Current 4-Digit PIN</label>
+          <input type="password" id="currentPinInput" class="form-input" maxlength="4" placeholder="••••" required autofocus style="text-align: center; font-size: 1.5rem; letter-spacing: 0.5rem;" oninput="window.clearInputError('currentPinInput', 'currentPinErrorMsg')">
+          <div class="input-error-msg" id="currentPinErrorMsg" style="display: none; justify-content: center;"></div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full">
+          Verify & Continue ➡️
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL STEP 2: Update New PIN -->
+  <div class="modal-overlay" id="updateNewPinModal">
+    <div class="modal-container" style="max-width: 380px; text-align: center;">
+      <div class="modal-header">
+        <div class="modal-title">🔐 Set New Passkey / PIN</div>
+        <button class="close-btn" onclick="window.UIRenderer.closeModal('updateNewPinModal')">&times;</button>
+      </div>
+      <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+        Create and confirm your new 4-digit Security PIN.
+      </p>
+
+      <form id="updateNewPinForm" onsubmit="window.submitNewPinUpdate(event)">
+        <div class="form-group" style="margin-bottom: 1rem; text-align: left;">
+          <label class="form-label">New 4-Digit PIN</label>
+          <input type="password" id="newPinInput" class="form-input" maxlength="4" placeholder="••••" required style="text-align: center; font-size: 1.5rem; letter-spacing: 0.5rem;">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1.25rem; text-align: left;">
+          <label class="form-label">Confirm New PIN</label>
+          <input type="password" id="confirmPinInput" class="form-input" maxlength="4" placeholder="••••" required style="text-align: center; font-size: 1.5rem; letter-spacing: 0.5rem;">
+        </div>
+
+        <button type="submit" class="btn btn-emerald btn-full">
+          Confirm & Update PIN 💾
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Edit Profile Info -->
+  <div class="modal-overlay" id="editProfileModal">
+    <div class="modal-container" style="max-width: 420px;">
+      <div class="modal-header">
+        <div class="modal-title">✏️ Edit Profile Info</div>
+        <button class="close-btn" onclick="window.UIRenderer.closeModal('editProfileModal')">&times;</button>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 1rem;">
+        <label class="form-label">User Full Name</label>
+        <input type="text" id="editNameInput" class="form-input" placeholder="e.g. Alex Mercer">
+      </div>
+
+      <div class="form-group" style="margin-bottom: 1.25rem;">
+        <label class="form-label">Phone Number</label>
+        <input type="text" id="editPhoneInput" class="form-input" placeholder="+1 (555) 234-5678">
+      </div>
+
+      <button type="button" class="btn btn-primary btn-full" onclick="window.saveEditedProfile()">
+        Save Profile Changes 💾
+      </button>
+    </div>
+  </div>
+
+
+
+  <!-- MODAL: Manage Profiles (New Sub-Profile) -->
+  <div class="modal-overlay" id="addProfileModal">
+    <div class="modal-container" style="max-width: 400px;">
+      <div class="modal-header">
+        <div class="modal-title">👥 Create Sub-Profile</div>
+        <button class="close-btn" onclick="window.UIRenderer.closeModal('addProfileModal')">&times;</button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Profile Name</label>
+        <input type="text" id="newProfileNameInput" class="form-input" placeholder="e.g. Family Reserve, Business Vault">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Profile Type</label>
+        <select id="newProfileTypeSelect" class="form-select">
+          <option value="personal">Personal Vault</option>
+          <option value="family">Family Reserve</option>
+          <option value="joint">Joint Account</option>
+        </select>
+      </div>
+
+      <button type="button" class="btn btn-primary btn-full" onclick="window.saveNewProfile()" style="margin-top: 1rem;">
+        Create Sub-Profile 👥
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL: New User Google Onboarding & Password Security Setup -->
+  <div class="modal-overlay" id="googleOnboardingModal">
+
+    <div class="modal-container" style="max-width: 460px; max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header">
+        <div class="modal-title">🔐 Complete Account Registration</div>
+      </div>
+
+      <div class="alert-box alert-info" style="margin-bottom: 1rem; font-size: 0.82rem;">
+        <span>🌐</span>
+        <div><strong>Google ID Verified!</strong><br>Welcome to VaultSmart. Please set your nickname, phone number, and password to secure your account.</div>
+      </div>
+
+      <!-- Fetched Google Details Badge -->
+      <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.75rem; margin-bottom: 1rem; font-size: 0.8rem; display: flex; flex-direction: column; gap: 0.25rem;">
+        <div>👤 <strong>Google Name:</strong> <span id="onboardGoogleNameDisplay">Harish K</span></div>
+        <div>✉️ <strong>Google Email:</strong> <span id="onboardGoogleEmailDisplay">harish.kgm2007@gmail.com</span></div>
+        <div>🌐 <strong>Detected Region & Currency:</strong> <span id="onboardGoogleRegionDisplay" style="color: var(--brand-blue); font-weight: 700;">India 🇮🇳 (INR ₹)</span></div>
+      </div>
+
+      <!-- Required Form Inputs -->
+      <div class="form-group" style="margin-bottom: 0.75rem;">
+        <label class="form-label" style="font-weight: 700;">Vault Nickname / Username <span style="color: var(--brand-blue); font-size: 0.75rem;">(Required - Editable later)</span></label>
+        <input type="text" id="onboardNicknameInput" class="form-input" placeholder="e.g. @harish_saver" required>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 0.75rem;">
+        <label class="form-label" style="font-weight: 700;">Phone Number <span style="color: var(--accent-rose); font-size: 0.75rem;">(Required)</span></label>
+        <input type="tel" id="onboardPhoneInput" class="form-input" placeholder="+91 98765 43210" required>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 0.75rem;">
+        <label class="form-label" style="font-weight: 700;">Create Security Password <span style="color: var(--accent-rose); font-size: 0.75rem;">(Required)</span></label>
+        <input type="password" id="onboardPasswordInput" class="form-input" placeholder="Enter strong password" required oninput="window.checkPasswordRequirements(this.value)">
+      </div>
+
+      <div class="form-group" style="margin-bottom: 0.85rem;">
+        <label class="form-label" style="font-weight: 700;">Confirm Password</label>
+        <input type="password" id="onboardConfirmPasswordInput" class="form-input" placeholder="Confirm password" required>
+      </div>
+
+      <!-- Password Security Specifications Checklist -->
+      <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.75rem; margin-bottom: 1.25rem; font-size: 0.78rem;">
+        <div style="font-weight: 700; color: var(--brand-navy); margin-bottom: 0.4rem;">🔑 Password Security Specifications:</div>
+        <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.25rem; color: var(--text-secondary);">
+          <li id="pwReqLen">❌ At least 8 characters long</li>
+          <li id="pwReqUpper">❌ At least 1 uppercase letter (A-Z)</li>
+          <li id="pwReqNum">❌ At least 1 number (0-9)</li>
+          <li id="pwReqSpec">❌ At least 1 special character (!@#$%^&*)</li>
+        </ul>
+      </div>
+
+      <button type="button" class="btn btn-emerald btn-full" onclick="window.submitGoogleOnboarding()">
+        🚀 Complete Registration & Launch Dashboard
+      </button>
+    </div>
+  </div>
+
+
+
+
+
+
+  <!-- Application JS Engine -->
+
+
+
+
+
+
+
+  <script src="js/utils.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/calculator.js"></script>
+  <script src="js/chart.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/router.js"></script>
+  <script src="js/modals.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+
+  <!-- PWA Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('sw.js').catch(function (err) {
+          console.warn('[Salvis PWA] Service Worker registration failed:', err);
+        });
+      });
+    }
+  </script>
+</body>
+
+</html>
