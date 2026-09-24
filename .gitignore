@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Env & local DB
+.env
+*.db
+*.sqlite
+*.sqlite3
+
+# Local dev server artifact (created by tests/run)
+*.log
