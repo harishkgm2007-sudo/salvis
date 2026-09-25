@@ -70,10 +70,10 @@
         </div>
 
         <div id="loginBox">
-          <form id="loginForm" onsubmit="event.preventDefault(); window.loginWithPassword(event);">
+          <form id="loginForm">
             <div class="form-group">
               <label class="form-label">Email, Phone Number, or Salvis ID</label>
-              <input type="text" id="loginEmail" class="form-input" placeholder="e.g. 9384108190 or harish.kgm2007@gmail.com" required oninput="window.clearInputError('loginEmail', 'loginEmailError')">
+              <input type="text" id="loginEmail" class="form-input" placeholder="e.g. you@example.com" required oninput="window.clearInputError('loginEmail', 'loginEmailError')">
               <div id="loginEmailError" class="input-error-msg" style="display: none; color: #ef4444; font-size: 0.8rem; font-weight: 600; margin-top: 0.35rem; align-items: center; gap: 0.3rem;"></div>
             </div>
 
@@ -121,7 +121,7 @@
 
             <div class="form-group">
               <label class="form-label">Security PIN (4-Digits)</label>
-              <input type="password" id="signupPin" class="form-input" maxlength="4" placeholder="1234" required>
+              <input type="password" id="signupPin" class="form-input" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="••••" required>
             </div>
           </div>
 
@@ -150,7 +150,7 @@
         <form id="existingUserPasskeyForm" onsubmit="window.submitExistingUserPasskey(event)">
           <div class="form-group">
             <label class="form-label">Enter 4-Digit Passkey</label>
-            <input type="password" id="existingUserPasskeyInput" class="form-input" maxlength="4" placeholder="••••" required autofocus style="text-align: center; font-size: 1.5rem; letter-spacing: 0.5rem;" oninput="window.clearInputError('existingUserPasskeyInput', 'existingPasskeyErrorMsg')">
+            <input type="password" id="existingUserPasskeyInput" class="form-input" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="••••" required autofocus style="text-align: center; font-size: 1.5rem; letter-spacing: 0.5rem;" oninput="window.clearInputError('existingUserPasskeyInput', 'existingPasskeyErrorMsg')">
             <div class="input-error-msg" id="existingPasskeyErrorMsg" style="display: none; justify-content: center;"></div>
           </div>
 
@@ -184,7 +184,7 @@
         <div style="margin-bottom: 1.25rem; background: var(--bg-tertiary); padding: 0.85rem 1rem; border-radius: var(--radius-sm); border: 1px dashed var(--border-color); display: flex; align-items: center; justify-content: space-between;">
           <div>
             <label style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 700; display: block;">Region & Currency</label>
-            <div id="newUserRegionBadge" style="font-size: 0.9rem; font-weight: 800; color: var(--brand-emerald);">India 🇮🇳 (INR ₹)</div>
+            <div id="newUserRegionBadge" style="font-size: 0.9rem; font-weight: 800; color: var(--brand-emerald);">Detecting region...</div>
           </div>
           <span style="font-size: 1.2rem;">🌍</span>
         </div>
@@ -192,7 +192,7 @@
         <form id="newUserPasskeyForm" onsubmit="window.submitNewUserPasskey(event)">
           <div class="form-group" style="margin-bottom: 0.85rem;">
             <label class="form-label">Phone Number (For Recovery & SMS Alerts)</label>
-            <input type="tel" id="newUserPhoneInput" class="form-input" placeholder="+1 (555) 234-5678" required>
+            <input type="tel" id="newUserPhoneInput" class="form-input" placeholder="Enter your phone number including the country code" required>
           </div>
 
           <div class="form-group" style="margin-bottom: 0.85rem;">
@@ -206,7 +206,7 @@
 
           <div class="form-group" style="margin-bottom: 1rem;">
             <label class="form-label">Create 4-Digit Security Passkey</label>
-            <input type="password" id="newUserPasskeyInput" class="form-input" maxlength="4" placeholder="••••" required style="text-align: center; font-size: 1.4rem; letter-spacing: 0.4rem;">
+            <input type="password" id="newUserPasskeyInput" class="form-input" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="••••" required style="text-align: center; font-size: 1.4rem; letter-spacing: 0.4rem;">
             <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.2rem;">Used for quick vault unlocking & high-risk withdrawal authorization.</div>
           </div>
 
@@ -245,12 +245,12 @@
       <div class="nav-actions" id="navActions">
         <div class="wallet-badge">
           <span>💼 Wallet Ledger:</span>
-          <span class="wallet-amount" id="walletBalanceDisplay">$0.00</span>
+          <span class="wallet-amount" id="walletBalanceDisplay">0.00</span>
         </div>
 
         <div class="user-profile-badge" onclick="window.openProfilePage()" style="cursor: pointer;" title="View Profile & Settings">
           <span id="userAvatarDisplay">👨‍💼</span>
-          <span id="userNameDisplay">Alex Mercer</span>
+          <span id="userNameDisplay">Your name</span>
         </div>
 
         <button class="btn btn-secondary btn-sm" id="btnViewLedger">
@@ -288,7 +288,7 @@
     <div class="metrics-row" style="margin-bottom: 2rem;">
       <div class="metric-card">
         <div class="metric-label">Total Cumulative Saved</div>
-        <div class="metric-value" id="metricTotalSaved">$0.00</div>
+        <div class="metric-value" id="metricTotalSaved">0.00</div>
         <div class="metric-subtext positive">▲ Across all active savings vaults</div>
       </div>
 
@@ -306,7 +306,7 @@
 
       <div class="metric-card">
         <div class="metric-label">Monthly Savings Velocity</div>
-        <div class="metric-value" id="metricVelocity">$0.00/mo</div>
+        <div class="metric-value" id="metricVelocity">0.00/mo</div>
         <div class="metric-subtext positive">Scheduled recurring deposits</div>
       </div>
     </div>
@@ -475,14 +475,14 @@
           <div id="profileCardDisplayMode">
             <!-- Full Name -->
             <div style="font-size: 1.15rem; font-weight: 800; color: var(--brand-navy); padding: 0.15rem 0;">
-              <span id="profileViewNameDisplay">Alex Mercer</span>
+              <span id="profileViewNameDisplay">Your name</span>
             </div>
 
             <!-- Username / Nickname (Single Clean Edit Button) -->
             <div onclick="window.openInlineProfileEdit()" style="font-size: 0.88rem; color: var(--brand-blue); font-weight: 700; margin-top: 0.25rem; cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 0.15rem 0;" title="Click to edit nickname">
               <div style="display: flex; align-items: center; gap: 0.4rem;">
                 <span style="color: var(--text-secondary); font-weight: 500;">Username:</span>
-                <strong id="profileViewNicknameDisplay">@alex_saver</strong>
+                <strong id="profileViewNicknameDisplay">Not set</strong>
               </div>
               <span style="font-size: 0.8rem; color: var(--brand-blue); font-weight: 600;">✏️ Edit</span>
             </div>
@@ -491,21 +491,21 @@
             <div style="font-size: 0.88rem; color: var(--text-secondary); margin-top: 0.25rem; padding: 0.15rem 0;">
               <div style="display: flex; align-items: center; gap: 0.4rem;">
                 <span>📞 Phone:</span>
-                <strong id="profileViewPhoneDisplay" style="color: var(--brand-navy);">+1 (555) 234-5678</strong>
+                <strong id="profileViewPhoneDisplay" style="color: var(--brand-navy);">Not set</strong>
               </div>
             </div>
 
             <!-- Email -->
             <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem; display: flex; align-items: center; gap: 0.4rem;">
               <span>✉️ Email:</span>
-              <span id="profileViewEmailDisplay">alex@salvis.com</span>
+              <span id="profileViewEmailDisplay">Not set</span>
 
             </div>
 
             <!-- Detected Region & Currency -->
             <div style="font-size: 0.8rem; color: var(--brand-blue); margin-top: 0.5rem; display: flex; align-items: center; gap: 0.4rem; font-weight: 700; background: var(--bg-primary); padding: 0.45rem 0.6rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
               <span>🌐 Region & Currency:</span>
-              <span id="profileViewRegionDisplay">United States 🇺🇸 (USD $)</span>
+              <span id="profileViewRegionDisplay">Detecting region…</span>
             </div>
           </div>
 
@@ -518,12 +518,12 @@
 
             <div class="form-group" style="margin-bottom: 0.85rem;">
               <label class="form-label" style="font-size: 0.75rem; font-weight: 700; color: var(--brand-navy);">Edit Full Name</label>
-              <input type="text" id="inlineEditLegalNameInput" class="form-input" placeholder="e.g. Alex Mercer" style="padding: 0.55rem 0.75rem; font-size: 0.9rem;">
+              <input type="text" id="inlineEditLegalNameInput" class="form-input" placeholder="e.g. Your name" style="padding: 0.55rem 0.75rem; font-size: 0.9rem;">
             </div>
 
             <div class="form-group" style="margin-bottom: 0.85rem;">
               <label class="form-label" style="font-size: 0.75rem; font-weight: 700; color: var(--brand-navy);">Edit Phone Number</label>
-              <input type="tel" id="inlineEditPhoneInput" class="form-input" placeholder="+1 (555) 234-5678" style="padding: 0.55rem 0.75rem; font-size: 0.9rem;">
+              <input type="tel" id="inlineEditPhoneInput" class="form-input" placeholder="Enter your phone number including the country code" style="padding: 0.55rem 0.75rem; font-size: 0.9rem;">
             </div>
 
             <div style="display: flex; gap: 0.5rem;">
@@ -578,44 +578,7 @@
             <div style="background: var(--bg-subtle); padding: 1rem; border-radius: var(--radius-lg); border: 1px solid var(--border-color);">
               <div style="font-size: 0.85rem; font-weight: 700; color: var(--brand-navy); margin-bottom: 0.35rem;">Security PIN Authorization</div>
               <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.75rem;">Change 4-digit PIN for high-risk withdrawals</p>
-              <button type="button" class="btn btn-primary btn-sm" id="btnOpenChangePinModal" onclick="window.openChangePinModal()" style="margin-bottom: 0.5rem;">Change PIN 🔒</button>
-
-              <!-- Inline Change PIN Redirection Panel -->
-              <div id="pinChangeInlinePanel" style="display: none; margin-top: 0.85rem; padding: 1rem; background: var(--bg-primary); border: 1px solid var(--brand-blue); border-radius: var(--radius-md); text-align: left;">
-                <!-- Step 1: Verify Current PIN -->
-                <div id="inlinePinStep1">
-                  <div style="font-weight: 700; font-size: 0.85rem; color: var(--brand-navy); margin-bottom: 0.25rem;">🔑 Verify Current PIN</div>
-                  <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.75rem;">Enter your current 4-digit PIN to authorize change.</p>
-                  <form onsubmit="window.verifyCurrentPinInline(event)">
-                    <input type="password" id="inlineCurrentPinInput" class="form-input" maxlength="4" placeholder="••••" required style="text-align: center; font-size: 1.2rem; letter-spacing: 0.4rem; margin-bottom: 0.5rem;" oninput="window.clearInputError('inlineCurrentPinInput', 'inlineCurrentPinErrorMsg')">
-                    <div class="input-error-msg" id="inlineCurrentPinErrorMsg" style="display: none; margin-bottom: 0.75rem;"></div>
-                    <div style="display: flex; gap: 0.5rem;">
-                      <button type="submit" class="btn btn-primary btn-sm" style="flex: 1;">Verify & Continue ➡️</button>
-                      <button type="button" class="btn btn-secondary btn-sm" onclick="window.closeInlinePinPanel()">Cancel</button>
-                    </div>
-                  </form>
-                </div>
-
-                <!-- Step 2: Set New PIN -->
-                <div id="inlinePinStep2" style="display: none;">
-                  <div style="font-weight: 700; font-size: 0.85rem; color: var(--brand-navy); margin-bottom: 0.25rem;">🔐 Set New 4-Digit PIN</div>
-                  <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.75rem;">Create and confirm your new Security PIN.</p>
-                  <form onsubmit="window.submitNewPinInline(event)">
-                    <div style="margin-bottom: 0.5rem;">
-                      <label style="font-size: 0.7rem; color: var(--text-secondary); display: block; margin-bottom: 0.2rem;">New 4-Digit PIN</label>
-                      <input type="password" id="inlineNewPinInput" class="form-input" maxlength="4" placeholder="••••" required style="text-align: center; font-size: 1.2rem; letter-spacing: 0.4rem;">
-                    </div>
-                    <div style="margin-bottom: 0.75rem;">
-                      <label style="font-size: 0.7rem; color: var(--text-secondary); display: block; margin-bottom: 0.2rem;">Confirm New PIN</label>
-                      <input type="password" id="inlineConfirmPinInput" class="form-input" maxlength="4" placeholder="••••" required style="text-align: center; font-size: 1.2rem; letter-spacing: 0.4rem;">
-                    </div>
-                    <div style="display: flex; gap: 0.5rem;">
-                      <button type="submit" class="btn btn-emerald btn-sm" style="flex: 1;">Confirm & Update PIN 💾</button>
-                      <button type="button" class="btn btn-secondary btn-sm" onclick="window.closeInlinePinPanel()">Cancel</button>
-                    </div>
-                  </form>
-                </div>
-              </div>
+              <button type="button" class="btn btn-primary btn-sm" id="btnOpenChangePinModal" style="margin-bottom: 0.5rem;">Change PIN 🔒</button>
             </div>
 
             <div style="background: var(--bg-subtle); padding: 1rem; border-radius: var(--radius-lg); border: 1px solid var(--border-color);">
@@ -627,11 +590,13 @@
             </div>
 
             <div style="background: var(--bg-subtle); padding: 1rem; border-radius: var(--radius-lg); border: 1px solid var(--border-color);">
-              <div style="font-size: 0.85rem; font-weight: 700; color: var(--brand-navy); margin-bottom: 0.35rem;">Base Currency</div>
-              <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Auto-detected from Google / Region</p>
-              <div id="staticUserCurrencyDisplay" style="background: var(--bg-primary); border: 1px solid var(--border-color); padding: 0.55rem 0.75rem; border-radius: var(--radius-md); font-size: 0.85rem; font-weight: 700; color: var(--brand-navy);">
-                <span id="staticCurrencyText">India 🇮🇳 (INR ₹)</span>
+              <div style="font-size: 0.85rem; font-weight: 700; color: var(--brand-navy); margin-bottom: 0.35rem;">Region &amp; Base Currency</div>
+              <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Detected from your browser, with a manual override.</p>
+              <div id="staticUserCurrencyDisplay" style="background: var(--bg-primary); border: 1px solid var(--border-color); padding: 0.55rem 0.75rem; border-radius: var(--radius-md); font-size: 0.85rem; font-weight: 700; color: var(--brand-navy); margin-bottom: 0.5rem;">
+                <span id="staticCurrencyText">Detecting region...</span>
               </div>
+              <select id="profileRegionSelect" class="form-select" aria-label="Select profile region" onchange="window.updateUserRegion(this.value)"></select>
+              <div id="profileRegionDetectionStatus" style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.4rem;">Detecting region...</div>
             </div>
           </div>
         </div>
@@ -719,7 +684,7 @@
         <div class="modal-title">🔒 Enter 4-Digit Security PIN</div>
       </div>
       <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">
-        Verification required to authorize fund withdrawal or reallocation. <br><small style="color: var(--brand-blue);">(Default Demo PIN: <strong>1234</strong>)</small>
+        Verification required to authorize fund withdrawal or reallocation.
       </p>
 
       <div class="pin-display" id="pinDisplay">
@@ -750,20 +715,15 @@
     </div>
   </div>
 
-  <!-- MODAL: Goal Creation Wizard -->
-  <div class="modal-overlay" id="wizardModal">
-    <div class="modal-container">
+  <!-- MODAL: Unified Vault Creation Studio -->
+  <div class="modal-overlay" id="createVaultModal">
+    <div class="modal-container create-vault-container">
       <div class="modal-header">
         <div class="modal-title">Create Smart Savings Vault</div>
-        <button class="close-btn" onclick="window.UIRenderer.closeModal('wizardModal')">&times;</button>
+        <button class="close-btn" onclick="window.UIRenderer.closeModal('createVaultModal')">&times;</button>
       </div>
 
-      <div class="wizard-steps">
-        <div class="wizard-step-node active">1</div>
-        <div class="wizard-step-node">2</div>
-      </div>
-
-      <div id="wizardContent">
+      <div id="createVaultContent">
         <!-- Rendered dynamically -->
       </div>
     </div>
@@ -816,7 +776,7 @@
         <button class="close-btn" onclick="window.UIRenderer.closeModal('reallocateModal')">&times;</button>
       </div>
       <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
-        Transfer your accumulated <strong id="reallocateSourceAmount" style="color: var(--accent-emerald);">$0.00</strong> into another active target vault without breaking your savings momentum.
+        Transfer your accumulated <strong id="reallocateSourceAmount" style="color: var(--accent-emerald);">0.00</strong> into another active target vault without breaking your savings momentum.
       </div>
       <div class="form-group">
         <label class="form-label">Select Destination Vault</label>
@@ -847,7 +807,7 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label">Deposit Amount ($)</label>
+        <label class="form-label" id="payAmountLabel">Deposit Amount</label>
         <input type="number" id="payAmountInput" class="form-input" value="0">
       </div>
 
@@ -937,56 +897,6 @@
     </div>
   </div>
 
-  <!-- MODAL: Google OAuth Sign-In / Registration -->
-  <div class="modal-overlay" id="googleModal">
-    <div class="modal-container" style="max-width: 440px; padding: 2rem 1.5rem; text-align: center;">
-      <div style="margin-bottom: 1rem; display: flex; justify-content: center;">
-        <svg width="40" height="40" viewBox="0 0 24 24">
-          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-        </svg>
-      </div>
-      <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--brand-navy); margin-bottom: 0.25rem;">Sign in with Google</h3>
-      <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.5rem;">Choose an account to continue to <strong>VaultSmart</strong></p>
-
-      <!-- Option 1: 1-Click Fast Google Account -->
-      <div id="btnGoogleAccountDefault" onclick="window.loginWithGoogleFast()" style="display: flex; align-items: center; gap: 1rem; padding: 0.85rem 1rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); cursor: pointer; text-align: left; transition: all 0.2s ease; margin-bottom: 1rem; background: var(--bg-primary);">
-        <div style="width: 42px; height: 42px; border-radius: 50%; background: #4285f4; color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem;">
-          🌐
-        </div>
-        <div style="flex: 1;">
-          <div style="font-weight: 700; color: var(--brand-navy); font-size: 0.95rem;">Google User</div>
-          <div style="font-size: 0.8rem; color: var(--text-secondary);">user.google@gmail.com</div>
-        </div>
-        <span style="font-size: 1.1rem;">➡️</span>
-      </div>
-
-      <div style="display: flex; align-items: center; margin: 1rem 0; color: var(--text-muted); font-size: 0.75rem;">
-        <div style="flex: 1; border-bottom: 1px solid var(--border-color);"></div>
-        <span style="padding: 0 0.5rem; text-transform: uppercase; font-weight: 600;">or register custom Google profile</span>
-        <div style="flex: 1; border-bottom: 1px solid var(--border-color);"></div>
-      </div>
-
-      <!-- Option 2: Register custom Google profile -->
-      <div style="text-align: left;">
-        <div class="form-group" style="margin-bottom: 0.75rem;">
-          <label class="form-label">Your Google Account Name</label>
-          <input type="text" id="googleCustomName" class="form-input" placeholder="e.g. Jordan Lee">
-        </div>
-        <div class="form-group" style="margin-bottom: 1.25rem;">
-          <label class="form-label">Google Email Address</label>
-          <input type="email" id="googleCustomEmail" class="form-input" placeholder="jordan@gmail.com">
-        </div>
-        <button type="button" class="btn btn-emerald btn-full" id="btnGoogleSubmitCustom" onclick="window.loginWithGoogleCustom()">
-          🚀 Authenticate & Launch Dashboard
-        </button>
-      </div>
-
-    </div>
-  </div>
-
   <!-- MODAL: Add Bank Account -->
   <div class="modal-overlay" id="addBankModal">
     <div class="modal-container" style="max-width: 440px;">
@@ -1041,7 +951,7 @@
       <form id="verifyCurrentPinForm" onsubmit="window.verifyCurrentPin(event)">
         <div class="form-group" style="margin-bottom: 1.25rem;">
           <label class="form-label" style="text-align: left;">Current 4-Digit PIN</label>
-          <input type="password" id="currentPinInput" class="form-input" maxlength="4" placeholder="••••" required autofocus style="text-align: center; font-size: 1.5rem; letter-spacing: 0.5rem;" oninput="window.clearInputError('currentPinInput', 'currentPinErrorMsg')">
+          <input type="password" id="currentPinInput" class="form-input" data-clear-on-close maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="••••" required autofocus style="text-align: center; font-size: 1.5rem; letter-spacing: 0.5rem;" oninput="window.clearInputError('currentPinInput', 'currentPinErrorMsg')">
           <div class="input-error-msg" id="currentPinErrorMsg" style="display: none; justify-content: center;"></div>
         </div>
 
@@ -1066,12 +976,12 @@
       <form id="updateNewPinForm" onsubmit="window.submitNewPinUpdate(event)">
         <div class="form-group" style="margin-bottom: 1rem; text-align: left;">
           <label class="form-label">New 4-Digit PIN</label>
-          <input type="password" id="newPinInput" class="form-input" maxlength="4" placeholder="••••" required style="text-align: center; font-size: 1.5rem; letter-spacing: 0.5rem;">
+          <input type="password" id="newPinInput" class="form-input" data-clear-on-close maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="••••" required style="text-align: center; font-size: 1.5rem; letter-spacing: 0.5rem;">
         </div>
 
         <div class="form-group" style="margin-bottom: 1.25rem; text-align: left;">
           <label class="form-label">Confirm New PIN</label>
-          <input type="password" id="confirmPinInput" class="form-input" maxlength="4" placeholder="••••" required style="text-align: center; font-size: 1.5rem; letter-spacing: 0.5rem;">
+          <input type="password" id="confirmPinInput" class="form-input" data-clear-on-close maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="••••" required style="text-align: center; font-size: 1.5rem; letter-spacing: 0.5rem;">
         </div>
 
         <button type="submit" class="btn btn-emerald btn-full">
@@ -1091,12 +1001,12 @@
 
       <div class="form-group" style="margin-bottom: 1rem;">
         <label class="form-label">User Full Name</label>
-        <input type="text" id="editNameInput" class="form-input" placeholder="e.g. Alex Mercer">
+        <input type="text" id="editNameInput" class="form-input" placeholder="e.g. Your name">
       </div>
 
       <div class="form-group" style="margin-bottom: 1.25rem;">
         <label class="form-label">Phone Number</label>
-        <input type="text" id="editPhoneInput" class="form-input" placeholder="+1 (555) 234-5678">
+        <input type="text" id="editPhoneInput" class="form-input" placeholder="Enter your phone number including the country code">
       </div>
 
       <button type="button" class="btn btn-primary btn-full" onclick="window.saveEditedProfile()">
@@ -1150,20 +1060,20 @@
 
       <!-- Fetched Google Details Badge -->
       <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.75rem; margin-bottom: 1rem; font-size: 0.8rem; display: flex; flex-direction: column; gap: 0.25rem;">
-        <div>👤 <strong>Google Name:</strong> <span id="onboardGoogleNameDisplay">Harish K</span></div>
-        <div>✉️ <strong>Google Email:</strong> <span id="onboardGoogleEmailDisplay">harish.kgm2007@gmail.com</span></div>
-        <div>🌐 <strong>Detected Region & Currency:</strong> <span id="onboardGoogleRegionDisplay" style="color: var(--brand-blue); font-weight: 700;">India 🇮🇳 (INR ₹)</span></div>
+        <div>👤 <strong>Google Name:</strong> <span id="onboardGoogleNameDisplay">Not set</span></div>
+        <div>✉️ <strong>Google Email:</strong> <span id="onboardGoogleEmailDisplay">Not set</span></div>
+        <div>🌐 <strong>Detected Region &amp; Currency:</strong> <span id="onboardGoogleRegionDisplay" style="color: var(--brand-blue); font-weight: 700;">Detecting...</span></div>
       </div>
 
       <!-- Required Form Inputs -->
       <div class="form-group" style="margin-bottom: 0.75rem;">
         <label class="form-label" style="font-weight: 700;">Vault Nickname / Username <span style="color: var(--brand-blue); font-size: 0.75rem;">(Required - Editable later)</span></label>
-        <input type="text" id="onboardNicknameInput" class="form-input" placeholder="e.g. @harish_saver" required>
+        <input type="text" id="onboardNicknameInput" class="form-input" placeholder="e.g. @your_name" required>
       </div>
 
       <div class="form-group" style="margin-bottom: 0.75rem;">
         <label class="form-label" style="font-weight: 700;">Phone Number <span style="color: var(--accent-rose); font-size: 0.75rem;">(Required)</span></label>
-        <input type="tel" id="onboardPhoneInput" class="form-input" placeholder="+91 98765 43210" required>
+        <input type="tel" id="onboardPhoneInput" class="form-input" placeholder="Enter your phone number including the country code" required>
       </div>
 
       <div class="form-group" style="margin-bottom: 0.75rem;">

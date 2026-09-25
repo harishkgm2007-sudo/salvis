@@ -475,6 +475,8 @@ class CategoryDonutChartInstance {
     this.ctx = canvas.getContext('2d');
     this.legendContainer = legendContainerId ? document.getElementById(legendContainerId) : null;
     this.goals = goals || [];
+    const currency = typeof SavingsCalculator !== 'undefined' ? SavingsCalculator : (window.SavingsCalculator || {});
+    this.fmt = currency.formatCurrency ? (value) => currency.formatCurrency(value) : (value) => `$${Number(value || 0).toFixed(2)}`;
     this.hoverIndex = -1;
     this.drawProgress = 0;
     this.animationId = null;

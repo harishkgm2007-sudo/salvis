@@ -35,7 +35,16 @@ class UIRenderer {
     lastReceiptTx: null,
     pinValue: '',
     wizardStep: 1,
-    wizardData: null
+    wizardData: null,
+    currentVaultType: 'standard',
+    vaultType: 'personal',
+    shoppingMode: 'url',
+    fetchedProductData: null,
+    trackedVaultRefreshTimer: null,
+    trackedVaultRefreshInFlight: false,
+    authRenderTimer: null,
+    authRenderUserId: '',
+    regionRefreshHandler: null
   };
 
   static init() {
@@ -45,19 +54,31 @@ class UIRenderer {
     this.bindEvents();
     this.bindKeyboardShortcuts();
     this.checkAuthState();
+    this.startTrackedVaultRefresh();
     const notif = getNotifications();
     if (notif && notif.startAutoRefresh) notif.startAutoRefresh();
   }
 
   static checkAuthState() {
     try {
-      const user = getAuthService().getCurrentUser();
+      if (this.state.authRenderTimer) {
+        clearTimeout(this.state.authRenderTimer);
+        this.state.authRenderTimer = null;
+      }
+
+      const auth = getAuthService();
+      const user = auth && typeof auth.getCurrentUser === 'function' ? auth.getCurrentUser() : null;
       if (!user) {
+        this.state.authRenderUserId = '';
         if (typeof window.showPageView === 'function') window.showPageView('auth');
         else this._fallbackView('auth');
         if (typeof window.showAuthLoginView === 'function') window.showAuthLoginView();
         return;
       }
+
+      const userId = String(user.id);
+      this.state.authRenderUserId = userId;
+      this.startTrackedVaultRefresh();
       window.scrollTo({ top: 0 });
       if (typeof window.showPageView === 'function') window.showPageView('dashboard');
       else this._fallbackView('dashboard');
@@ -65,10 +86,42 @@ class UIRenderer {
       this.renderSkeletons();
       const notif = getNotifications();
       if (notif && notif.updateBell) notif.updateBell();
-      setTimeout(() => this.renderAll(), 280);
+      this.refreshRegionForSession(user);
+      this.state.authRenderTimer = setTimeout(() => {
+        this.state.authRenderTimer = null;
+        const current = auth && typeof auth.getCurrentUser === 'function' ? auth.getCurrentUser() : null;
+        if (!current || String(current.id) !== userId) return;
+        this.renderAll();
+      }, 280);
     } catch (err) {
       console.error('checkAuthState error:', err);
     }
+  }
+
+  static refreshRegionForSession(user = null) {
+    const auth = getAuthService();
+    const session = user || (auth && typeof auth.getCurrentUser === 'function' ? auth.getCurrentUser() : null);
+    if (!session || !auth || typeof auth.refreshRegionFromIp !== 'function' || session.regionSource === 'manual') return;
+
+    if (!this.state.regionRefreshHandler) {
+      this.state.regionRefreshHandler = (result) => {
+        if (!result) return;
+        const currentAuth = getAuthService();
+        const current = currentAuth && typeof currentAuth.getCurrentUser === 'function'
+          ? currentAuth.getCurrentUser()
+          : null;
+        const resultUserId = result.user && result.user.id;
+        if (!current || (resultUserId && String(current.id) !== String(resultUserId)) || current.regionSource === 'manual') return;
+        if (result.updated) {
+          if (typeof window.renderProfileView === 'function') window.renderProfileView();
+          this.renderAll();
+        } else if (typeof window.renderProfileView === 'function') {
+          window.renderProfileView();
+        }
+      };
+    }
+    const pending = auth.refreshRegionFromIp({ onUpdate: this.state.regionRefreshHandler });
+    if (pending && typeof pending.catch === 'function') pending.catch(() => {});
   }
 
   static _fallbackView(view) {
@@ -214,8 +267,8 @@ class UIRenderer {
     const q = this.state.searchQuery.trim().toLowerCase();
     if (q) {
       out = out.filter((g) =>
-        g.itemName.toLowerCase().indexOf(q) !== -1 ||
-        g.category.toLowerCase().indexOf(q) !== -1 ||
+        String(g.itemName || '').toLowerCase().indexOf(q) !== -1 ||
+        String(g.category || '').toLowerCase().indexOf(q) !== -1 ||
         (g.status || '').toLowerCase().indexOf(q) !== -1
       );
     }
@@ -276,20 +329,46 @@ class UIRenderer {
       const overpaid = sched.isOverpaid
         ? `<div class="overpaid-banner">⚠️ Overpaid by ${calc.formatCurrency(sched.surplus)}</div>`
         : '';
+      const isTracked = goal.is_tracked === true;
+      const isShopping = goal.vaultType === 'shopping' || isTracked;
+      const safeImage = isShopping ? this._safeExternalUrl(goal.image_url) : '';
+      const storeName = goal.store_name || (isShopping ? this._getStoreName(goal.product_url) : '');
+      const previousPrice = parseFloat(goal.previousTrackedPrice || 0);
+      const currentPrice = parseFloat(goal.lastTrackedPrice || goal.targetAmount || 0);
+      const priceChange = previousPrice > 0 && currentPrice > 0 ? previousPrice - currentPrice : 0;
+      const priceMoveText = priceChange > 0
+        ? ` · ${calc.formatCurrency(priceChange)} price drop`
+        : priceChange < 0
+        ? ` · ${calc.formatCurrency(Math.abs(priceChange))} price increase`
+        : '';
+      const trackedTime = this._formatTrackedTime(goal.lastTrackedAt);
+      const priceUpdate = isTracked && currentPrice > 0
+        ? `<span class="tracked-price-change ${priceChange < 0 ? 'price-increase' : ''}">${calc.formatCurrency(currentPrice)} live${priceMoveText} · ${trackedTime}</span>`
+        : isTracked
+        ? '<span class="tracked-price-live">Live price tracking</span>'
+        : '';
+      const storeBadge = isShopping
+        ? `<span class="store-badge">🛒 ${esc(storeName || 'Shopping')} · ${isTracked ? 'Live' : 'Manual'}</span>`
+        : '';
 
       return `
-        <div class="goal-card" data-goal-id="${goal.id}">
+        <div class="goal-card ${isTracked ? 'tracked-goal-card' : ''}" data-goal-id="${goal.id}">
           <div class="goal-card-inner">
             <div class="goal-card-header">
               <div class="goal-icon-title">
-                <div class="goal-emoji">${esc(goal.emoji || '🎯')}</div>
-                <div>
+                ${isShopping && safeImage
+                  ? `<img class="tracked-product-image" src="${esc(safeImage)}" alt="${esc(goal.itemName)}" loading="lazy">`
+                  : `<div class="goal-emoji">${esc(goal.emoji || '🎯')}</div>`}
+                <div class="goal-title-wrap">
                   <div class="goal-name">${esc(goal.itemName)}</div>
                   <div class="goal-category">${esc(goal.category || 'General')} • Target ${esc(goal.targetDate || '')}</div>
+                  ${storeBadge}
                 </div>
               </div>
               ${statusBadge}
             </div>
+
+            ${priceUpdate ? `<div class="tracked-card-update">${priceUpdate}</div>` : ''}
 
             <div class="progress-container">
               <div class="progress-labels">
@@ -321,6 +400,12 @@ class UIRenderer {
                 ⚡ Deposit
               </button>
             ` : ''}
+            ${isTracked ? `
+              <button class="btn btn-secondary btn-refresh-price" data-goal-id="${goal.id}">⚡ Check Price</button>
+            ` : ''}
+            ${isShopping && this._safeExternalUrl(goal.product_url) ? `
+              <a class="btn btn-secondary store-link" href="${esc(this._safeExternalUrl(goal.product_url))}" target="_blank" rel="noopener noreferrer">🔗 Store</a>
+            ` : ''}
             <button class="btn btn-secondary btn-manage" data-goal-id="${goal.id}">
               ⚙️ Manage
             </button>
@@ -333,6 +418,13 @@ class UIRenderer {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         this.openPaymentSandbox(btn.getAttribute('data-goal-id'));
+      });
+    });
+
+    goalsGrid.querySelectorAll('.btn-refresh-price').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.refreshTrackedVaultPrice(btn.getAttribute('data-goal-id'));
       });
     });
 
@@ -411,6 +503,9 @@ class UIRenderer {
       if (!modal) return;
       modal.classList.remove('active');
     }
+    if (modalId === 'updateNewPinModal' && typeof window.cancelPinChange === 'function') {
+      window.cancelPinChange();
+    }
     if (modalId === 'pinModal') this.state.pinValue = '';
   }
 
@@ -426,11 +521,575 @@ class UIRenderer {
 
   // ===================== WIZARD =====================
 
+  static _getProductApiUrl() {
+    const configured = window.SALVIS_API_URL;
+    if (configured) return String(configured).replace(/\/$/, '') + '/api/scrape-product';
+    const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
+    const hostname = window.location.hostname || 'localhost';
+    return `${protocol}//${hostname}:8000/api/scrape-product`;
+  }
+
+  static _safeExternalUrl(value) {
+    try {
+      const url = new URL(String(value || ''));
+      return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  static _formatTrackedTime(value) {
+    if (!value) return 'Live';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'Live';
+    const minutes = Math.max(0, Math.floor((Date.now() - date.getTime()) / 60000));
+    if (minutes < 1) return 'Live';
+    if (minutes < 60) return `${minutes}m ago`;
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
+  static _getStoreName(url) {
+    try {
+      const hostname = new URL(url).hostname.replace(/^www\./, '').toLowerCase();
+      if (hostname.includes('amazon')) return 'Amazon';
+      if (hostname.includes('flipkart')) return 'Flipkart';
+      if (hostname.includes('ebay')) return 'eBay';
+      if (hostname.includes('walmart')) return 'Walmart';
+      if (hostname.includes('etsy')) return 'Etsy';
+      if (hostname.includes('myntra')) return 'Myntra';
+      return hostname.split('.')[0].replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) || 'Online Store';
+    } catch (e) {
+      return 'Online Store';
+    }
+  }
+
+  static _syncCreationForm() {
+    const read = (id) => {
+      const element = document.getElementById(id);
+      return element ? element.value.trim() : null;
+    };
+    const current = this.state.wizardData || {};
+    this.state.wizardData = {
+      ...current,
+      itemName: read('createItemName') ?? current.itemName ?? '',
+      store_name: read('createStoreName') ?? current.store_name ?? '',
+      category: read('createCategory') ?? current.category ?? 'Shopping',
+      targetAmount: parseFloat(read('createTargetAmount')) || 0,
+      product_url: read('productUrlInput') ?? read('createProductUrl') ?? current.product_url ?? '',
+      image_url: read('createImageUrl') ?? current.image_url ?? '',
+      emoji: read('createEmoji') || current.emoji || '🎯',
+      frequency: read('createFrequency') || current.frequency || 'weekly',
+      targetDate: read('createTargetDate') || current.targetDate
+    };
+  }
+
+  static setVaultType(type) {
+    this._syncCreationForm();
+    if (type === 'shopping' || type === 'url') {
+      this.state.vaultType = 'shopping';
+      if (type === 'url') this.state.shoppingMode = 'url';
+    } else {
+      this.state.vaultType = 'personal';
+    }
+    this.state.currentVaultType = this.state.vaultType === 'shopping' ? 'url' : 'standard';
+    this.renderWizardStep();
+  }
+
+  static setShoppingMode(mode) {
+    this._syncCreationForm();
+    this.state.shoppingMode = mode === 'manual' ? 'manual' : 'url';
+    this.renderWizardStep();
+  }
+
+  static _updateCreationCalculation() {
+    const amount = parseFloat(document.getElementById('createTargetAmount')?.value) || 0;
+    const frequency = document.getElementById('createFrequency')?.value || 'weekly';
+    const targetDate = document.getElementById('createTargetDate')?.value;
+    const startDate = this.state.wizardData?.startDate || new Date().toISOString().split('T')[0];
+    const schedule = getSavingsCalculator().calculateSchedule(amount, 0, startDate, targetDate, frequency);
+    const payment = document.getElementById('createCalcPayment');
+    const sub = document.getElementById('createCalcSub');
+    if (payment) payment.textContent = schedule.formattedPayment;
+    if (sub) sub.textContent = `${schedule.remainingIntervals} ${schedule.frequencyLabel} payments over ${schedule.remainingDays} days`;
+  }
+
+  static _confirmManualProductPrice() {
+    const targetAmount = parseFloat(document.getElementById('createTargetAmount')?.value) || 0;
+    if (!(targetAmount > 0)) {
+      this.showToast('Enter the price you want to track first', 'warning');
+      return;
+    }
+    this.state.fetchedProductData = {
+      ...(this.state.fetchedProductData || {}),
+      is_captcha: false,
+      manualFallback: true,
+      price: targetAmount
+    };
+    this.state.wizardData = { ...this.state.wizardData, lastTrackedPrice: targetAmount };
+    const previewPrice = document.getElementById('previewProductPrice');
+    const button = document.getElementById('btnConfirmManualPrice');
+    if (previewPrice) previewPrice.textContent = getSavingsCalculator().formatCurrency(targetAmount);
+    button?.remove();
+    this.showToast('Manual price confirmed; the product link is still being tracked');
+  }
+
+  static async fetchProductMetadata() {
+    const urlInput = document.getElementById('productUrlInput');
+    const fetchBtn = document.getElementById('btnFetchUrl');
+    const url = urlInput?.value.trim() || '';
+    if (!url || !/^https?:\/\//i.test(url)) {
+      this.showToast('Please enter a valid product URL', 'warning');
+      return;
+    }
+    this._syncCreationForm();
+
+    const originalBtnText = fetchBtn?.textContent || 'Fetch Price';
+    if (fetchBtn) {
+      fetchBtn.disabled = true;
+      fetchBtn.textContent = 'Scanning...';
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 7000);
+
+    try {
+      const response = await fetch(this._getProductApiUrl(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.detail || 'Could not fetch product details');
+
+      const price = parseFloat(data.price);
+      const productData = {
+        ...data,
+        title: data.title || 'Tracked Product',
+        price: Number.isFinite(price) && price > 0 ? price : 0,
+        is_captcha: data.is_captcha === true,
+        image_url: this._safeExternalUrl(data.image_url),
+        store_name: data.store_name || this._getStoreName(url)
+      };
+      this.state.fetchedProductData = productData;
+      this.state.wizardData = {
+        ...this.state.wizardData,
+        itemName: productData.title,
+        category: ['Electronics', 'Travel', 'Gaming', 'Safety', 'Shopping'].includes(productData.category)
+          ? productData.category
+          : this.state.wizardData.category,
+        product_url: url,
+        store_name: productData.store_name,
+        image_url: productData.image_url,
+        lastTrackedPrice: productData.price,
+        lastTrackedAt: new Date().toISOString()
+      };
+
+      const itemName = document.getElementById('createItemName') || document.getElementById('wizItemName');
+      const targetAmount = document.getElementById('createTargetAmount') || document.getElementById('wizTargetAmount');
+      const category = document.getElementById('createCategory') || document.getElementById('wizCategory');
+      const image = document.getElementById('previewProductImg');
+      const title = document.getElementById('previewProductTitle');
+      const previewPrice = document.getElementById('previewProductPrice');
+      const card = document.getElementById('productPreviewCard');
+      if (itemName) itemName.value = productData.title;
+      if (targetAmount && productData.price > 0) targetAmount.value = productData.price;
+      if (category) category.value = this.state.wizardData.category;
+      if (image) {
+        image.src = productData.image_url || '';
+        image.hidden = !productData.image_url;
+      }
+      if (title) title.textContent = productData.title;
+      if (previewPrice) previewPrice.textContent = productData.is_captcha
+        ? 'Live price protected — enter a target below'
+        : productData.price > 0
+        ? getSavingsCalculator().formatCurrency(productData.price)
+        : 'Price unavailable';
+      card?.classList.remove('hidden');
+      if (productData.is_captcha) {
+        this.showToast('Store anti-bot active. Enter target price manually to start tracking.', 'info');
+      } else if (productData.price > 0) {
+        this.showToast(`Found price: ${getSavingsCalculator().formatCurrency(productData.price)}`, 'success');
+      }
+      this._updateCreationCalculation();
+    } catch (err) {
+      clearTimeout(timeoutId);
+      const isTimeout = err.name === 'AbortError' || (err.message && err.message.toLowerCase().includes('timed out'));
+      const detectedStore = this._getStoreName(url);
+
+      const itemName = document.getElementById('createItemName') || document.getElementById('wizItemName');
+      const targetAmount = document.getElementById('createTargetAmount') || document.getElementById('wizTargetAmount');
+      if (itemName && (!itemName.value.trim() || itemName.value === 'e.g. Sony WH-1000XM5')) {
+        itemName.value = `${detectedStore} Product`;
+      }
+      if (targetAmount) targetAmount.focus();
+
+      if (isTimeout) {
+        this.showToast(`${detectedStore} scan timed out. Enter price manually below.`, 'warning');
+      } else {
+        this.showToast(err.message || 'Price scan unavailable. Enter price manually below.', 'warning');
+      }
+    } finally {
+      clearTimeout(timeoutId);
+      if (fetchBtn) {
+        fetchBtn.disabled = false;
+        fetchBtn.textContent = originalBtnText;
+      }
+    }
+  }
+
+  static _applyTrackedPrice(goal, data, price) {
+    const previousPrice = parseFloat(goal.lastTrackedPrice || goal.previousTrackedPrice || 0) || price;
+    const history = Array.isArray(goal.priceHistory) ? goal.priceHistory.slice() : [];
+    const lastEntry = history[history.length - 1];
+    if (!lastEntry || parseFloat(lastEntry.price) !== price) {
+      history.push({ price, timestamp: new Date().toISOString() });
+    }
+    goal.previousTrackedPrice = previousPrice;
+    goal.lastTrackedPrice = price;
+    goal.lastTrackedAt = new Date().toISOString();
+    goal.priceHistory = history.slice(-30);
+    goal.image_url = this._safeExternalUrl(data.image_url) || goal.image_url || '';
+    goal.store_name = data.store_name || goal.store_name || this._getStoreName(goal.product_url);
+  }
+
+  static async refreshTrackedVaultPrice(goalId) {
+    const goal = _storageSvc().getGoalById(goalId);
+    if (!goal || !goal.is_tracked || !goal.product_url) {
+      this.showToast('This vault is not connected to a live product URL', 'warning');
+      return;
+    }
+    const detailButton = document.getElementById('btnRefreshDetailPrice');
+    if (detailButton) {
+      detailButton.disabled = true;
+      detailButton.textContent = 'Checking...';
+    }
+    const buttons = document.querySelectorAll('.btn-refresh-price');
+    buttons.forEach((button) => {
+      if (button.getAttribute('data-goal-id') === goalId) {
+        button.disabled = true;
+        button.textContent = 'Checking...';
+      }
+    });
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 7000);
+
+    try {
+      const response = await fetch(this._getProductApiUrl(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: goal.product_url }),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      const data = await response.json().catch(() => ({}));
+      if (data.is_captcha) {
+        this.showToast('The store is asking for verification; keeping your current price', 'warning');
+        return;
+      }
+      const price = parseFloat(data.price);
+      if (!response.ok || !Number.isFinite(price) || price <= 0) throw new Error('No live price found');
+      const previous = parseFloat(goal.lastTrackedPrice || 0);
+      this._applyTrackedPrice(goal, data, price);
+      _storageSvc().saveGoal(goal);
+      this.renderAll();
+      if (this.state.selectedGoalForDetail?.id === goal.id) this.openGoalDetailModal(goal.id);
+      const delta = previous - price;
+      this.showToast(delta > 0 ? `🎉 Price dropped by ${getSavingsCalculator().formatCurrency(delta)}!` : delta < 0 ? `Price increased by ${getSavingsCalculator().formatCurrency(Math.abs(delta))}` : 'Live price is unchanged');
+    } catch (e) {
+      clearTimeout(timeoutId);
+      this.showToast('Could not sync this product price right now', 'error');
+    } finally {
+      clearTimeout(timeoutId);
+      buttons.forEach((button) => {
+        if (button.getAttribute('data-goal-id') === goalId) {
+          button.disabled = false;
+          button.textContent = '⚡ Check Price';
+        }
+      });
+      const currentDetailButton = document.getElementById('btnRefreshDetailPrice');
+      if (currentDetailButton) {
+        currentDetailButton.disabled = false;
+        currentDetailButton.textContent = '⚡ Check Price';
+      }
+    }
+  }
+
+  static startTrackedVaultRefresh() {
+    if (this.state.trackedVaultRefreshTimer) clearInterval(this.state.trackedVaultRefreshTimer);
+    this._refreshTrackedVaults();
+    this.state.trackedVaultRefreshTimer = setInterval(() => this._refreshTrackedVaults(), 30 * 60 * 1000);
+  }
+
+  static async _refreshTrackedVaults() {
+    if (this.state.trackedVaultRefreshInFlight) return;
+    const storage = _storageSvc();
+    const tracked = storage.getGoals().filter((goal) => goal.is_tracked && goal.product_url);
+    if (!tracked.length) return;
+
+    this.state.trackedVaultRefreshInFlight = true;
+    try {
+      let changed = false;
+      for (const goal of tracked) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
+        try {
+          const response = await fetch(this._getProductApiUrl(), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: goal.product_url }),
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+          const data = await response.json().catch(() => ({}));
+          const price = parseFloat(data.price);
+          if (!response.ok || !Number.isFinite(price) || price <= 0) continue;
+          const current = storage.getGoalById(goal.id);
+          if (!current || current.product_url !== goal.product_url) continue;
+          this._applyTrackedPrice(current, data, price);
+          storage.saveGoal(current);
+          changed = true;
+        } catch (e) {
+          clearTimeout(timeoutId);
+        }
+      }
+      if (changed) this.renderAll();
+    } finally {
+      this.state.trackedVaultRefreshInFlight = false;
+    }
+  }
+
+  static openCreateVaultModal() {
+    const modal = document.getElementById('createVaultModal');
+    if (!modal) return;
+    const today = new Date().toISOString().split('T')[0];
+    this.state.vaultType = 'personal';
+    this.state.shoppingMode = 'url';
+    this.state.currentVaultType = 'standard';
+    this.state.fetchedProductData = null;
+    this.state.wizardData = {
+      emoji: '🎯',
+      category: 'Safety',
+      itemName: '',
+      store_name: '',
+      product_url: '',
+      image_url: '',
+      targetAmount: 1000,
+      frequency: 'weekly',
+      startDate: today,
+      targetDate: new Date(Date.now() + 120 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    };
+    this.renderWizardStep();
+    this.openModal('createVaultModal');
+  }
+
   static openWizardModal() {
+    return this.openCreateVaultModal();
+  }
+
+  static renderWizardStep() {
+    const content = document.getElementById('createVaultContent');
+    if (!content) return;
+    const wd = this.state.wizardData;
+    const isShopping = this.state.vaultType === 'shopping';
+    const isTracked = isShopping && this.state.shoppingMode === 'url';
+    const fetched = this.state.fetchedProductData;
+    const safeImage = this._safeExternalUrl(wd.image_url);
+    const categories = ['Safety', 'Travel', 'Education', 'Health', 'Investment', 'Shopping', 'Custom'];
+    const presets = [
+      { label: 'Emergency fund', amount: 10000, category: 'Safety', emoji: '🛡️' },
+      { label: 'Travel', amount: 3500, category: 'Travel', emoji: '🌸' },
+      { label: 'Education', amount: 12000, category: 'Education', emoji: '🎓' },
+      { label: 'Car', amount: 25000, category: 'Investment', emoji: '🚗' }
+    ];
+
+    content.innerHTML = `
+      <div class="create-studio-head">
+        <h3 class="wizard-title">Create Smart Savings Vault</h3>
+        <p class="create-studio-subtitle">Choose a goal and Salvis will keep your plan moving in real time.</p>
+      </div>
+      <div class="creation-mode-grid">
+        <button type="button" class="creation-mode-card ${isShopping ? 'active' : ''}" data-creation-type="shopping">
+          <span class="creation-mode-icon">🛍️</span><span><strong>Online Shopping</strong><small>Track a product or plan a manual purchase</small></span>
+        </button>
+        <button type="button" class="creation-mode-card ${!isShopping ? 'active' : ''}" data-creation-type="personal">
+          <span class="creation-mode-icon">💰</span><span><strong>Personal Savings</strong><small>Build toward a life milestone</small></span>
+        </button>
+      </div>
+
+      ${isShopping ? `
+        <div class="shopping-mode-tabs" role="tablist">
+          <button type="button" class="shopping-mode-tab ${isTracked ? 'active' : ''}" data-shopping-mode="url">🔗 Live URL Tracking</button>
+          <button type="button" class="shopping-mode-tab ${!isTracked ? 'active' : ''}" data-shopping-mode="manual">✏️ Manual Price</button>
+        </div>
+      ` : ''}
+
+      ${isTracked ? `
+        <div class="creation-section url-container">
+          <label class="form-label" for="productUrlInput">Product link</label>
+          <div class="url-input-row">
+            <input type="url" id="productUrlInput" class="form-input" placeholder="Paste Amazon, Flipkart, Myntra, or store link" value="${esc(wd.product_url)}">
+            <button type="button" id="btnFetchUrl" class="btn btn-primary">Fetch Price</button>
+          </div>
+          <div id="productPreviewCard" class="product-preview-card ${fetched ? '' : 'hidden'}">
+            <img id="previewProductImg" src="${esc(safeImage)}" alt="Product Preview" class="product-preview-image" ${safeImage ? '' : 'hidden'}>
+            <div class="preview-info">
+              <div id="previewProductTitle" class="preview-title">${esc(fetched?.title || wd.itemName || 'Product preview')}</div>
+              <div class="preview-price">Detected: <span id="previewProductPrice">${fetched?.is_captcha ? 'Live price protected — enter a target below' : fetched?.price > 0 ? esc(getSavingsCalculator().formatCurrency(fetched.price)) : 'Fetch to detect live price'}</span></div>
+              ${fetched?.store_name ? `<div class="preview-store">${esc(fetched.store_name)} · ${fetched.is_captcha ? 'manual fallback ready' : 'live tracking enabled'}</div>` : ''}
+            </div>
+            ${fetched?.is_captcha ? `<button type="button" id="btnConfirmManualPrice" class="btn btn-secondary btn-sm">Use entered target</button>` : ''}
+          </div>
+        </div>
+      ` : ''}
+
+      <div class="creation-section">
+        <div class="form-group">
+          <label class="form-label" for="createItemName">${isShopping ? 'Product title' : 'Goal title'}</label>
+          <input type="text" id="createItemName" class="form-input" placeholder="${isShopping ? 'e.g. Sony WH-1000XM5' : 'e.g. Emergency Fund'}" value="${esc(wd.itemName)}">
+        </div>
+        <div class="form-row">
+          ${isShopping && !isTracked ? `
+            <div class="form-group">
+              <label class="form-label" for="createStoreName">Store / platform</label>
+              <input type="text" id="createStoreName" class="form-input" placeholder="Amazon, Croma, Offline Store" value="${esc(wd.store_name)}">
+            </div>
+          ` : ''}
+          ${!isShopping ? `
+            <div class="form-group">
+              <label class="form-label" for="createCategory">Category</label>
+              <select id="createCategory" class="form-select">
+                ${categories.map((category) => `<option ${wd.category === category ? 'selected' : ''}>${category}</option>`).join('')}
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="createEmoji">Icon</label>
+              <input type="text" id="createEmoji" class="form-input" maxlength="8" value="${esc(wd.emoji)}">
+            </div>
+          ` : ''}
+          <div class="form-group">
+            <label class="form-label" for="createTargetAmount">${isShopping ? 'Target price' : 'Target amount'}</label>
+            <input type="number" id="createTargetAmount" class="form-input" min="0" step="0.01" value="${esc(wd.targetAmount)}">
+          </div>
+        </div>
+        ${isShopping && !isTracked ? `
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="createProductUrl">Product link <span class="optional-label">Optional</span></label>
+              <input type="url" id="createProductUrl" class="form-input" placeholder="https://..." value="${esc(wd.product_url)}">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="createImageUrl">Reference image URL <span class="optional-label">Optional</span></label>
+              <input type="url" id="createImageUrl" class="form-input" placeholder="https://..." value="${esc(wd.image_url)}">
+            </div>
+          </div>
+        ` : ''}
+        ${!isShopping ? `
+          <div class="quick-preset-row">
+            ${presets.map((preset) => `<button type="button" class="quick-preset" data-preset-label="${esc(preset.label)}" data-preset-amount="${preset.amount}" data-preset-category="${preset.category}" data-preset-emoji="${preset.emoji}">${preset.emoji} ${esc(preset.label)}</button>`).join('')}
+          </div>
+        ` : ''}
+      </div>
+
+      <div class="creation-section schedule-section">
+        <div class="section-title-row"><div><h4>Savings schedule</h4><p>Adjust the cadence and date. Your payment updates instantly.</p></div><span class="live-chip">● LIVE CALCULATOR</span></div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="createFrequency">Saving interval</label>
+            <select id="createFrequency" class="form-select">
+              ${Object.keys(FREQUENCY_OPTIONS).map((key) => `<option value="${key}" ${wd.frequency === key ? 'selected' : ''}>${FREQUENCY_OPTIONS[key]}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="createTargetDate">Target completion date</label>
+            <input type="date" id="createTargetDate" class="form-input" value="${esc(wd.targetDate)}">
+          </div>
+        </div>
+        <div class="calc-panel inline-calc">
+          <div class="calc-payment-label">RECURRING PAYMENT</div>
+          <div class="calc-payment-value" id="createCalcPayment"></div>
+          <div class="calc-payment-sub" id="createCalcSub"></div>
+        </div>
+      </div>
+      <div class="wizard-nav creation-submit-row">
+        <span class="tracking-note">${isTracked ? 'Price tracking runs every 30 minutes while Salvis is open.' : 'You can edit the target after creating the vault.'}</span>
+        <button type="button" class="btn btn-primary" id="btnCreateVault">Confirm & Launch Vault 🚀</button>
+      </div>
+    `;
+
+    content.querySelectorAll('[data-creation-type]').forEach((button) => button.addEventListener('click', () => this.setVaultType(button.dataset.creationType)));
+    content.querySelectorAll('[data-shopping-mode]').forEach((button) => button.addEventListener('click', () => this.setShoppingMode(button.dataset.shoppingMode)));
+    content.querySelector('#btnFetchUrl')?.addEventListener('click', () => this.fetchProductMetadata());
+    content.querySelector('#btnConfirmManualPrice')?.addEventListener('click', () => this._confirmManualProductPrice());
+    content.querySelectorAll('.quick-preset').forEach((button) => button.addEventListener('click', () => {
+      this._syncCreationForm();
+      this.state.wizardData = { ...this.state.wizardData, itemName: button.dataset.presetLabel, targetAmount: Number(button.dataset.presetAmount), category: button.dataset.presetCategory, emoji: button.dataset.presetEmoji };
+      this.renderWizardStep();
+    }));
+    content.querySelectorAll('#createTargetAmount, #createFrequency, #createTargetDate').forEach((input) => {
+      input.addEventListener('input', () => this._updateCreationCalculation());
+      input.addEventListener('change', () => this._updateCreationCalculation());
+    });
+    content.querySelector('#btnCreateVault').addEventListener('click', () => this._createVaultFromStudio());
+    this._updateCreationCalculation();
+  }
+
+  static async _createVaultFromStudio() {
+    this._syncCreationForm();
+    const wd = this.state.wizardData;
+    const isShopping = this.state.vaultType === 'shopping';
+    const isTracked = isShopping && this.state.shoppingMode === 'url';
+    if (!wd.itemName || !(wd.targetAmount > 0)) {
+      this.showToast('Add a title and a target amount first', 'warning');
+      return;
+    }
+    if (isTracked && !/^https?:\/\//i.test(wd.product_url)) {
+      this.showToast('Paste a valid product URL first', 'warning');
+      return;
+    }
+    const user = getAuthService().getCurrentUser();
+    const timestamp = new Date().toISOString();
+    const trackedPrice = isTracked ? parseFloat(this.state.fetchedProductData?.price || wd.targetAmount) : 0;
+    const newGoal = {
+      id: 'goal-' + Date.now(),
+      userId: user ? user.id : null,
+      vaultType: isShopping ? 'shopping' : 'personal',
+      shoppingMode: isShopping ? this.state.shoppingMode : null,
+      track_mode: isShopping ? this.state.shoppingMode : null,
+      itemName: wd.itemName,
+      store_name: isShopping ? (wd.store_name || (isTracked ? this._getStoreName(wd.product_url) : '')) : '',
+      category: isShopping ? 'Shopping' : wd.category,
+      emoji: isShopping && isTracked ? '🛒' : (wd.emoji || (isShopping ? '🛍️' : '🎯')),
+      product_url: isShopping ? wd.product_url : '',
+      image_url: isShopping ? (this._safeExternalUrl(wd.image_url) || '') : '',
+      targetAmount: wd.targetAmount,
+      savedAmount: 0,
+      is_tracked: isTracked,
+      lastTrackedPrice: trackedPrice,
+      previousTrackedPrice: trackedPrice,
+      lastTrackedAt: isTracked ? timestamp : null,
+      priceHistory: isTracked && trackedPrice > 0 ? [{ price: trackedPrice, timestamp }] : [],
+      frequency: wd.frequency,
+      startDate: wd.startDate,
+      targetDate: wd.targetDate,
+      status: 'active',
+      createdAt: timestamp
+    };
+    _storageSvc().saveGoal(newGoal);
+    this.closeModal('createVaultModal');
+    this.renderAll();
+    this.showToast(`🚀 Vault "${esc(newGoal.itemName)}" created!`);
+  }
+
+  static _openLegacyWizardModal() {
     const modal = document.getElementById('wizardModal');
     if (!modal) return;
 
     this.state.wizardStep = 1;
+    this.state.currentVaultType = 'standard';
+    this.state.fetchedProductData = null;
     this.state.wizardData = {
       emoji: '📱',
       category: 'Electronics',
@@ -438,14 +1097,17 @@ class UIRenderer {
       targetAmount: 1299,
       frequency: 'weekly',
       startDate: new Date().toISOString().split('T')[0],
-      targetDate: new Date(Date.now() + 120 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      targetDate: new Date(Date.now() + 120 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      product_url: '',
+      store_name: '',
+      image_url: ''
     };
 
     this.renderWizardStep();
     this.openModal('wizardModal');
   }
 
-  static renderWizardStep() {
+  static _renderLegacyWizardStep() {
     const content = document.getElementById('wizardContent');
     if (!content) return;
 
@@ -462,38 +1124,67 @@ class UIRenderer {
       content.innerHTML = `
         <h3 class="wizard-title">Step 1: Select Vault Target</h3>
 
-        <div class="form-label">Vault Presets</div>
-        <div class="preset-grid">
-          <div class="preset-card ${wd.itemName.includes('iPhone') ? 'selected' : ''}" data-preset="iphone">
-            <div class="preset-emoji">📱</div>
-            <div class="preset-title">iPhone 16</div>
+        <div class="vault-type-selector form-group">
+          <div class="form-label">Vault Type</div>
+          <div class="vault-type-grid">
+            <button type="button" id="btnTypeStandard" class="type-btn ${this.state.currentVaultType === 'standard' ? 'active' : ''}">
+              <span>🏦</span> Standard Savings
+            </button>
+            <button type="button" id="btnTypeUrl" class="type-btn ${this.state.currentVaultType === 'url' ? 'active' : ''}">
+              <span>🛒</span> Live Product URL
+            </button>
           </div>
-          <div class="preset-card ${wd.itemName.includes('MacBook') ? 'selected' : ''}" data-preset="macbook">
-            <div class="preset-emoji">💻</div>
-            <div class="preset-title">MacBook Pro</div>
+        </div>
+
+        <div id="urlInputContainer" class="url-container form-group ${this.state.currentVaultType === 'url' ? '' : 'hidden'}">
+          <label class="form-label" for="productUrlInput">Product Link (Amazon, Flipkart, etc.)</label>
+          <div class="url-input-row">
+            <input type="url" id="productUrlInput" class="form-input" placeholder="https://www.amazon.in/dp/..." value="${esc(wd.product_url || '')}">
+            <button type="button" id="btnFetchUrl" class="btn btn-primary">Fetch Price</button>
           </div>
-          <div class="preset-card ${wd.itemName.includes('Japan') ? 'selected' : ''}" data-preset="travel">
-            <div class="preset-emoji">🌸</div>
-            <div class="preset-title">Japan Trip</div>
+          <div id="productPreviewCard" class="product-preview-card ${this.state.fetchedProductData ? '' : 'hidden'}">
+            <img id="previewProductImg" src="${esc(wd.image_url || '')}" alt="Product Preview" class="product-preview-image" ${wd.image_url ? '' : 'hidden'}>
+            <div class="preview-info">
+              <div id="previewProductTitle" class="preview-title">${esc(this.state.fetchedProductData?.title || wd.itemName)}</div>
+              <div class="preview-price">Detected Price: <span id="previewProductPrice">${this.state.fetchedProductData?.price > 0 ? esc(getSavingsCalculator().formatCurrency(this.state.fetchedProductData.price)) : 'Scan a product to detect its price'}</span></div>
+            </div>
           </div>
-          <div class="preset-card ${wd.itemName.includes('PS5') ? 'selected' : ''}" data-preset="ps5">
-            <div class="preset-emoji">🎮</div>
-            <div class="preset-title">PS5 Pro</div>
-          </div>
-          <div class="preset-card ${wd.itemName.includes('Reserve') ? 'selected' : ''}" data-preset="rainy">
-            <div class="preset-emoji">🛡️</div>
-            <div class="preset-title">Reserve Fund</div>
+        </div>
+
+        <div id="vaultPresetsContainer" class="${this.state.currentVaultType === 'url' ? 'hidden' : ''}">
+          <div class="form-label">Vault Presets</div>
+          <div class="preset-grid">
+            <div class="preset-card ${wd.itemName.includes('iPhone') ? 'selected' : ''}" data-preset="iphone">
+              <div class="preset-emoji">📱</div>
+              <div class="preset-title">iPhone 16</div>
+            </div>
+            <div class="preset-card ${wd.itemName.includes('MacBook') ? 'selected' : ''}" data-preset="macbook">
+              <div class="preset-emoji">💻</div>
+              <div class="preset-title">MacBook Pro</div>
+            </div>
+            <div class="preset-card ${wd.itemName.includes('Japan') ? 'selected' : ''}" data-preset="travel">
+              <div class="preset-emoji">🌸</div>
+              <div class="preset-title">Japan Trip</div>
+            </div>
+            <div class="preset-card ${wd.itemName.includes('PS5') ? 'selected' : ''}" data-preset="ps5">
+              <div class="preset-emoji">🎮</div>
+              <div class="preset-title">PS5 Pro</div>
+            </div>
+            <div class="preset-card ${wd.itemName.includes('Reserve') ? 'selected' : ''}" data-preset="rainy">
+              <div class="preset-emoji">🛡️</div>
+              <div class="preset-title">Reserve Fund</div>
+            </div>
           </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label">Vault Item Name</label>
+          <label class="form-label" for="wizItemName">Vault Item Name</label>
           <input type="text" id="wizItemName" class="form-input" value="${esc(wd.itemName)}">
         </div>
 
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">Category</label>
+            <label class="form-label" for="wizCategory">Category</label>
             <select id="wizCategory" class="form-select">
               <option ${wd.category === 'Electronics' ? 'selected' : ''}>Electronics</option>
               <option ${wd.category === 'Travel' ? 'selected' : ''}>Travel</option>
@@ -504,7 +1195,7 @@ class UIRenderer {
           </div>
 
           <div class="form-group">
-            <label class="form-label">Target Amount</label>
+            <label class="form-label" for="wizTargetAmount">Target Amount</label>
             <input type="number" id="wizTargetAmount" class="form-input" value="${wd.targetAmount}">
           </div>
         </div>
@@ -514,6 +1205,9 @@ class UIRenderer {
         </div>
       `;
 
+      content.querySelector('#btnTypeStandard').addEventListener('click', () => this.setVaultType('standard'));
+      content.querySelector('#btnTypeUrl').addEventListener('click', () => this.setVaultType('url'));
+      content.querySelector('#btnFetchUrl').addEventListener('click', () => this.fetchProductMetadata());
       content.querySelectorAll('.preset-card').forEach((card) => {
         card.addEventListener('click', () => {
           const type = card.getAttribute('data-preset');
@@ -530,6 +1224,12 @@ class UIRenderer {
         this.state.wizardData.itemName = document.getElementById('wizItemName').value.trim();
         this.state.wizardData.category = document.getElementById('wizCategory').value;
         this.state.wizardData.targetAmount = parseFloat(document.getElementById('wizTargetAmount').value) || 0;
+        this.state.wizardData.product_url = document.getElementById('productUrlInput').value.trim();
+        this.state.wizardData.store_name = this.state.fetchedProductData?.store_name || this._getStoreName(this.state.wizardData.product_url);
+        if (this.state.currentVaultType === 'url' && !/^https?:\/\//i.test(this.state.wizardData.product_url)) {
+          this.showToast('Enter a product URL before continuing', 'warning');
+          return;
+        }
         this.state.wizardStep = 2;
         this.renderWizardStep();
       });
@@ -597,18 +1297,26 @@ class UIRenderer {
           this.showToast('Please enter a valid target amount 💰', 'warning');
           return;
         }
+        const isTracked = this.state.currentVaultType === 'url';
         const newGoal = {
           id: 'goal-' + Date.now(),
           userId: user ? user.id : null,
           itemName: this.state.wizardData.itemName || 'Savings Vault',
           category: this.state.wizardData.category,
-          emoji: this.state.wizardData.emoji,
+          emoji: isTracked ? '🛒' : this.state.wizardData.emoji,
           targetAmount: this.state.wizardData.targetAmount,
           savedAmount: 0,
           frequency: this.state.wizardData.frequency,
           startDate: this.state.wizardData.startDate,
           targetDate: this.state.wizardData.targetDate,
           status: 'active',
+          is_tracked: isTracked,
+          product_url: isTracked ? this.state.wizardData.product_url : '',
+          store_name: isTracked ? this.state.wizardData.store_name : '',
+          image_url: isTracked ? this.state.wizardData.image_url : '',
+          lastTrackedPrice: isTracked ? this.state.wizardData.lastTrackedPrice || this.state.wizardData.targetAmount : 0,
+          previousTrackedPrice: isTracked ? this.state.wizardData.lastTrackedPrice || this.state.wizardData.targetAmount : 0,
+          lastTrackedAt: isTracked ? new Date().toISOString() : null,
           createdAt: new Date().toISOString()
         };
 
@@ -666,6 +1374,24 @@ class UIRenderer {
         ? `<div class="overpaid-banner">⚠️ Overpaid by ${calc.formatCurrency(sched.surplus)}</div>`
         : ''}
 
+      ${goal.is_tracked ? `
+        <div class="tracked-detail-panel">
+          <div class="tracked-detail-head">
+            <div>
+              <div class="fin-item-label">LIVE PRODUCT PRICE</div>
+              <div class="tracked-detail-price">${calc.formatCurrency(goal.lastTrackedPrice || goal.targetAmount)}</div>
+              <div class="tracked-detail-store">${esc(goal.store_name || this._getStoreName(goal.product_url))} · Updated ${this._formatTrackedTime(goal.lastTrackedAt)}</div>
+            </div>
+            <button class="btn btn-secondary btn-sm" id="btnRefreshDetailPrice">⚡ Check Price</button>
+          </div>
+          <div class="price-history">
+            <div class="fin-item-label">RECENT PRICE HISTORY</div>
+            ${(Array.isArray(goal.priceHistory) ? goal.priceHistory.slice(-6).reverse() : []).map((entry) => `<div class="price-history-row"><span>${calc.formatCurrency(entry.price)}</span><span>${esc(new Date(entry.timestamp).toLocaleString())}</span></div>`).join('') || '<div class="price-history-empty">Sync the product to start tracking price changes.</div>'}
+          </div>
+          <button type="button" class="btn btn-secondary btn-full btn-sm" id="btnDisableUrlTracking">Use manual target instead</button>
+        </div>
+      ` : ''}
+
       <div class="price-shift-box">
         <label class="form-label">Live Product Target Price Shift Simulator</label>
         <div class="price-shift-row">
@@ -700,6 +1426,16 @@ class UIRenderer {
         </div>
       </div>
     `;
+
+    document.getElementById('btnRefreshDetailPrice')?.addEventListener('click', () => this.refreshTrackedVaultPrice(goal.id));
+    document.getElementById('btnDisableUrlTracking')?.addEventListener('click', () => {
+      goal.is_tracked = false;
+      goal.track_mode = 'manual';
+      _storageSvc().saveGoal(goal);
+      this.renderAll();
+      this.openGoalDetailModal(goal.id);
+      this.showToast('URL tracking disabled; manual target mode enabled', 'warning');
+    });
 
     document.getElementById('btnUpdateTargetPrice')?.addEventListener('click', () => {
       const newPrice = parseFloat(document.getElementById('detailPriceInput').value);
@@ -925,6 +1661,9 @@ class UIRenderer {
     );
 
     document.getElementById('payGoalName').textContent = goal.itemName;
+    const currency = getSavingsCalculator().getActiveUserCurrency();
+    const payAmountLabel = document.getElementById('payAmountLabel');
+    if (payAmountLabel) payAmountLabel.textContent = `Deposit Amount (${currency.code || 'local currency'})`;
     document.getElementById('payAmountInput').value = sched.paymentPerInterval || 1;
     this._resetPaymentUI();
 
@@ -1483,28 +2222,6 @@ class UIRenderer {
   // ===================== EVENTS =====================
 
   static bindEvents() {
-    document.getElementById('btnGoogleAccountDefault')?.addEventListener('click', async (e) => {
-      if (e) e.preventDefault();
-      const res = await getAuthService().loginWithGoogle('Google User', 'user.google@gmail.com', '🌐', { locale: 'en-IN' });
-      if (res.success) {
-        this.closeModal('googleModal');
-        this.showToast(`Authenticated via Google as ${esc(res.user.name)}! 🌐`);
-        this.checkAuthState();
-      }
-    });
-
-    document.getElementById('btnGoogleSubmitCustom')?.addEventListener('click', async (e) => {
-      if (e) e.preventDefault();
-      const name = document.getElementById('googleCustomName')?.value.trim() || 'Google User';
-      const email = document.getElementById('googleCustomEmail')?.value.trim() || 'user.google@gmail.com';
-      const res = await getAuthService().loginWithGoogle(name, email, '🌐', { locale: 'en-IN' });
-      if (res.success) {
-        this.closeModal('googleModal');
-        this.showToast(`Google Registration Complete! Welcome, ${esc(res.user.name)}! 🌐`);
-        this.checkAuthState();
-      }
-    });
-
     document.getElementById('loginForm')?.addEventListener('submit', (e) => {
       if (typeof window.loginWithPassword === 'function') window.loginWithPassword(e);
     });
@@ -1700,4 +2417,6 @@ class UIRenderer {
 if (typeof window !== 'undefined') {
   window.UIRenderer = UIRenderer;
   window.toggleAuthMode = UIRenderer.toggleAuthMode;
+  window.setVaultType = UIRenderer.setVaultType.bind(UIRenderer);
+  window.fetchProductMetadata = UIRenderer.fetchProductMetadata.bind(UIRenderer);
 }

@@ -44,6 +44,9 @@ class ModalManager {
     el.classList.remove('active');
     this._stack = this._stack.filter((x) => x !== id);
     this._cleanupInputs(el);
+    if (id === 'updateNewPinModal' && typeof window.cancelPinChange === 'function') {
+      window.cancelPinChange();
+    }
 
     if (this._stack.length === 0) {
       if (this._lastFocused && this._lastFocused !== document.body) {

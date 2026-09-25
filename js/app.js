@@ -7,6 +7,7 @@
    ========================================================================== */
 
 const GOOGLE_CLIENT_ID = "336079462676-rrr0adbpjv3fbt9tv3dulu3f6k526pbt.apps.googleusercontent.com";
+let pendingPinChangeToken = '';
 
 function parseJwt(token) {
   try {
@@ -28,7 +29,7 @@ window.handleGoogleCredentialResponse = function(response) {
     const name = payload.name || payload.given_name || payload.email.split('@')[0];
     const email = payload.email;
     const avatar = payload.picture || '🌐';
-    processGoogleAuthFlow(name, email, avatar, payload);
+        processGoogleAuthFlow(name, email, avatar, payload, true);
   }
 };
 
@@ -145,17 +146,12 @@ window.triggerGoogleSignIn = function() {
   if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
     try {
       google.accounts.id.prompt();
+      return;
     } catch (e) {}
   }
 
-  if (ui && typeof ui.openModal === 'function') {
-    ui.openModal('googleModal');
-  } else {
-    const modal = document.getElementById('googleModal');
-    if (modal) {
-      modal.classList.add('active');
-      modal.style.cssText = 'display: flex !important; opacity: 1 !important; visibility: visible !important; pointer-events: auto !important; z-index: 999999 !important;';
-    }
+  if (ui && typeof ui.showToast === 'function') {
+    ui.showToast('Google sign-in is unavailable. Please use password sign-in or signup.', 'warning');
   }
 };
 
@@ -181,7 +177,7 @@ window.checkGoogleOAuthCallback = function() {
         const avatar = payload.picture || '🌐';
         
         window.history.replaceState(null, document.title, window.location.pathname);
-        processGoogleAuthFlow(name, email, avatar, payload);
+    processGoogleAuthFlow(name, email, avatar, payload, true);
         return;
       }
     }
@@ -194,7 +190,7 @@ window.checkGoogleOAuthCallback = function() {
       .then(user => {
         if (user && user.email) {
           window.history.replaceState(null, document.title, window.location.pathname);
-          processGoogleAuthFlow(user.name || user.email.split('@')[0], user.email, user.picture || '🌐', user);
+          processGoogleAuthFlow(user.name || user.email.split('@')[0], user.email, user.picture || '🌐', user, true);
         }
       })
       .catch(err => {
@@ -212,22 +208,30 @@ window.checkGoogleOAuthCallback = function() {
   }
 };
 
-window.selectGoogleAccount = function(name, email) {
+window.selectGoogleAccount = async function(name, email) {
   const auth = typeof AuthService !== 'undefined' ? AuthService : window.AuthService;
   const ui = typeof UIRenderer !== 'undefined' ? UIRenderer : window.UIRenderer;
-  if (auth) {
-    auth.loginWithGoogle(name, email, '🌐', { locale: 'en-IN' });
-    window.openDashboardPage();
-    if (ui) {
-      ui.checkAuthState();
-      ui.showToast(`Welcome, ${name}! Signed in via Google 🌐`);
-    }
+  if (!auth) return;
+
+  const result = await auth.loginWithGoogle(name, email, '🌐', {});
+  if (!result || !result.success) {
+    if (ui) ui.showToast((result && result.error) || 'Google sign-in could not be completed.', 'error');
+    return;
+  }
+
+  window.openDashboardPage();
+  if (ui) {
+    ui.checkAuthState();
+    ui.showToast(`Welcome, ${name}! Signed in via Google 🌐`);
   }
 };
 
 window.pendingAuthPayload = null;
 
 window.showAuthLoginView = function() {
+  window.pendingRegionDetectionToken = (window.pendingRegionDetectionToken || 0) + 1;
+  window.pendingAuthPayload = null;
+
   const defaultView = document.getElementById('authDefaultLoginView');
   const signupBox = document.getElementById('signupBox');
   const existingBox = document.getElementById('existingUserPasskeyBox');
@@ -241,6 +245,7 @@ window.showAuthLoginView = function() {
 
 window.showExistingUserPasskeyView = function(user) {
   if (!user) return;
+  window.pendingRegionDetectionToken = (window.pendingRegionDetectionToken || 0) + 1;
   window.pendingAuthPayload = user;
 
   const defaultView = document.getElementById('authDefaultLoginView');
@@ -276,12 +281,22 @@ window.showExistingUserPasskeyView = function(user) {
   }
 };
 
-window.showNewUserPasskeyView = function({ name, email, avatar, payload }) {
+window.showNewUserPasskeyView = function({ name, email, avatar, payload, googleVerified = false }) {
   const auth = typeof AuthService !== 'undefined' ? AuthService : window.AuthService;
-  const regionInfo = auth ? auth.detectRegionAndCurrency(payload) : { country: 'India 🇮🇳', currencyCode: 'INR', currencySymbol: '₹' };
+  const initialRegion = auth ? auth.detectRegionAndCurrency(payload) : {
+    country: 'Detecting region',
+    countryCode: '',
+    region: 'Detected',
+    currencyCode: '',
+    currencySymbol: '',
+    locale: 'en-US',
+    phonePrefix: '',
+    phonePlaceholder: 'Enter your phone number'
+  };
   const tempSalvisId = auth ? auth.generateSalvisId() : 'SALVIS-' + Math.floor(100000 + Math.random() * 900000);
-
-  window.pendingAuthPayload = { name, email, avatar, payload, tempSalvisId };
+  const detectionToken = (window.pendingRegionDetectionToken || 0) + 1;
+  window.pendingRegionDetectionToken = detectionToken;
+  window.pendingAuthPayload = { name, email, avatar, payload, tempSalvisId, googleVerified, regionInfo: initialRegion };
 
   const defaultView = document.getElementById('authDefaultLoginView');
   const signupBox = document.getElementById('signupBox');
@@ -299,6 +314,7 @@ window.showNewUserPasskeyView = function({ name, email, avatar, payload }) {
   const emailDisp = document.getElementById('newUserEmail');
   const regionBadge = document.getElementById('newUserRegionBadge');
   const input = document.getElementById('newUserPasskeyInput');
+  const phoneInput = document.getElementById('newUserPhoneInput');
 
   if (badge) badge.textContent = tempSalvisId;
   if (avatarDisp) {
@@ -311,12 +327,35 @@ window.showNewUserPasskeyView = function({ name, email, avatar, payload }) {
 
   if (nameDisp) nameDisp.textContent = name || 'New Savings User';
   if (emailDisp) emailDisp.textContent = email || 'newuser@example.com';
-  if (regionBadge) regionBadge.textContent = `${regionInfo.country} (${regionInfo.currencyCode} ${regionInfo.currencySymbol})`;
-  
-  const phoneInput = document.getElementById('newUserPhoneInput');
+
   if (phoneInput) {
-    phoneInput.value = regionInfo.phonePrefix || '+91 ';
-    phoneInput.placeholder = regionInfo.phonePlaceholder || '+91 98765 43210';
+    phoneInput.value = initialRegion.phonePrefix || '';
+    phoneInput.placeholder = initialRegion.phonePlaceholder || 'Enter your phone number';
+    phoneInput.dataset.autoRegion = 'true';
+    phoneInput.oninput = () => { phoneInput.dataset.autoRegion = 'false'; };
+  }
+
+  const renderRegion = (regionInfo) => {
+    if (!regionInfo ||
+      window.pendingRegionDetectionToken !== detectionToken ||
+      !window.pendingAuthPayload ||
+      window.pendingAuthPayload.email !== email) return;
+    window.pendingAuthPayload.regionInfo = regionInfo;
+    if (regionBadge) {
+      regionBadge.textContent = `${regionInfo.country} (${regionInfo.currencyCode} ${regionInfo.currencySymbol})`;
+    }
+    if (phoneInput && phoneInput.dataset.autoRegion === 'true') {
+      phoneInput.value = regionInfo.phonePrefix || '';
+      phoneInput.placeholder = regionInfo.phonePlaceholder || 'Enter your phone number';
+    }
+  };
+
+  renderRegion(initialRegion);
+
+  if (auth && typeof auth.detectRegionFromIp === 'function') {
+    auth.detectRegionFromIp().then((regionInfo) => {
+      renderRegion(regionInfo);
+    }).catch(() => {});
   }
 
   if (input) {
@@ -426,8 +465,8 @@ window.submitNewUserPasskey = async function(e) {
   const password = passwordInput ? passwordInput.value.trim() : '';
   const passkey = passkeyInput ? passkeyInput.value.trim() : '';
 
-  if (!phone) {
-    if (ui) ui.showToast('Please enter your Phone Number 📱', 'warning');
+  if (!phone || phone.replace(/\D/g, '').length < 7) {
+    if (ui) ui.showToast('Please enter a valid phone number including the country code 📱', 'warning');
     if (phoneInput) phoneInput.focus();
     return;
   }
@@ -446,6 +485,10 @@ window.submitNewUserPasskey = async function(e) {
 
   const payloadData = window.pendingAuthPayload;
   if (!payloadData || !payloadData.email) return;
+  if (!payloadData.googleVerified) {
+    if (ui) ui.showToast('Use the official Google sign-in button to create an account.', 'error');
+    return;
+  }
 
   if (auth) {
     const res = await auth.registerNewUserWithPasskey({
@@ -455,20 +498,24 @@ window.submitNewUserPasskey = async function(e) {
       password: password,
       passkey: passkey,
       avatar: payloadData.avatar,
-      payload: payloadData.payload
+      payload: payloadData.payload,
+      regionInfo: payloadData.regionInfo,
+      salvisId: payloadData.tempSalvisId
     });
 
-    if (res.success) {
+    if (res && res.success) {
       window.openDashboardPage();
       if (ui) {
         ui.checkAuthState();
         ui.showToast(`Welcome to Salvis, ${res.user.name}! Your account (${res.user.salvisId}) has been created 🚀`, 'success');
       }
+    } else if (ui) {
+      ui.showToast((res && res.error) || 'Could not create the account. Please try again.', 'error');
     }
   }
 };
 
-function processGoogleAuthFlow(name, email, avatar, payload) {
+function processGoogleAuthFlow(name, email, avatar, payload, googleVerified = false) {
   const auth = typeof AuthService !== 'undefined' ? AuthService : window.AuthService;
 
   if (auth) {
@@ -478,7 +525,7 @@ function processGoogleAuthFlow(name, email, avatar, payload) {
       window.showExistingUserPasskeyView(existing);
     } else {
       // NEW USER: SHOW NEW SALVIS ID & PASSKEY CREATION PROMPT
-      window.showNewUserPasskeyView({ name, email, avatar, payload });
+      window.showNewUserPasskeyView({ name, email, avatar, payload, googleVerified });
     }
   }
 }
@@ -574,8 +621,8 @@ window.submitGoogleOnboarding = async function() {
     if (ui) ui.showToast('Please enter a nickname/username', 'error');
     return;
   }
-  if (!phone) {
-    if (ui) ui.showToast('Please enter your phone number', 'error');
+  if (!phone || phone.replace(/\D/g, '').length < 7) {
+    if (ui) ui.showToast('Please enter a valid phone number including the country code', 'error');
     return;
   }
   if (!window.checkPasswordRequirements(pass)) {
@@ -588,18 +635,27 @@ window.submitGoogleOnboarding = async function() {
   }
 
   const currentUser = auth ? auth.getCurrentUser() : null;
-  if (currentUser && auth && typeof auth.updateUserProfile === 'function') {
-    // Persist the real password (hashed) so the account is usable for manual login.
-    await auth.updateUserProfile({ nickname, phone, password: pass, isSecurityOnboarded: true });
+  if (!currentUser || !auth || typeof auth.updateUserProfile !== 'function') {
+    if (ui) ui.showToast('No active account session. Please sign in again.', 'error');
+    return;
+  }
+  if (!window.pendingAuthPayload || !window.pendingAuthPayload.googleVerified) {
+    if (ui) ui.showToast('Use the official Google sign-in button to create an account.', 'error');
+    return;
+  }
 
-    // Auto-verify the newly saved credentials round-trip correctly.
-    if (currentUser.email && typeof auth.login === 'function') {
-      const verify = await auth.login(currentUser.email, pass);
-      if (verify && verify.success) {
-        if (ui) ui.showToast('Password saved & verified — you can now log in manually 🔐', 'success');
-      } else if (ui) {
-        ui.showToast('Onboarding saved, but password verification failed. Try "Forgot?" flow.', 'warning');
-      }
+  const updatedUser = await auth.updateUserProfile({ nickname, phone, password: pass, isSecurityOnboarded: true });
+  if (!updatedUser) {
+    if (ui) ui.showToast('Could not save onboarding details. Please try again.', 'error');
+    return;
+  }
+
+  if (currentUser.email && typeof auth.login === 'function') {
+    const verify = await auth.login(currentUser.email, pass);
+    if (verify && verify.success) {
+      if (ui) ui.showToast('Password saved and verified. You can now log in manually.', 'success');
+    } else if (ui) {
+      ui.showToast('Onboarding saved, but password verification failed. Try the Forgot flow.', 'warning');
     }
   }
 
@@ -614,44 +670,12 @@ window.submitGoogleOnboarding = async function() {
 
 window.loginWithGoogleFast = function() {
   const ui = typeof UIRenderer !== 'undefined' ? UIRenderer : window.UIRenderer;
-  if (ui && typeof ui.closeModal === 'function') {
-    ui.closeModal('googleModal');
-  } else {
-    const modal = document.getElementById('googleModal');
-    if (modal) {
-      modal.classList.remove('active');
-      modal.style.display = 'none';
-    }
-  }
-
-  processGoogleAuthFlow('Google User', 'user.google@gmail.com', '🌐', { locale: 'en-IN' });
+  if (ui) ui.showToast('Use the official Google sign-in button to continue.', 'error');
 };
 
 window.loginWithGoogleCustom = function() {
   const ui = typeof UIRenderer !== 'undefined' ? UIRenderer : window.UIRenderer;
-
-  const nameEl = document.getElementById('googleCustomName');
-  const emailEl = document.getElementById('googleCustomEmail');
-  const name = (nameEl && nameEl.value.trim()) ? nameEl.value.trim() : 'Google User';
-  const email = (emailEl && emailEl.value.trim()) ? emailEl.value.trim() : 'user.google@gmail.com';
-
-  if (!email || !email.includes('@')) {
-    if (ui) ui.showToast('Please enter a valid Gmail address 📧', 'warning');
-    if (emailEl) emailEl.focus();
-    return;
-  }
-
-  if (ui && typeof ui.closeModal === 'function') {
-    ui.closeModal('googleModal');
-  } else {
-    const modal = document.getElementById('googleModal');
-    if (modal) {
-      modal.classList.remove('active');
-      modal.style.display = 'none';
-    }
-  }
-
-  processGoogleAuthFlow(name, email, '🌐', { locale: 'en-IN' });
+  if (ui) ui.showToast('Use the official Google sign-in button to continue.', 'error');
 };
 
 window.loginWithPassword = async function(event) {
@@ -733,9 +757,9 @@ window.loginWithPassword = async function(event) {
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
-        // Render UI components & toast message
         if (ui) {
-          if (typeof ui.renderAll === 'function') ui.renderAll();
+          if (typeof ui.checkAuthState === 'function') ui.checkAuthState();
+          else if (typeof ui.renderAll === 'function') ui.renderAll();
           ui.showToast(`Welcome back, ${res.user ? res.user.name : 'User'}! 🏦 Vault Unlocked`, 'success');
         }
       } else {
@@ -835,6 +859,52 @@ window.openDashboardPage = function() {
   if (ui) ui.renderAll();
 };
 
+window.resolveRegionInfo = function(auth, user) {
+  const emptyRegion = {
+    country: 'Detected region',
+    countryCode: '',
+    region: 'Detected',
+    currencyCode: '',
+    currencySymbol: '',
+    locale: 'en-US',
+    timeZone: '',
+    regionSource: 'auto',
+    detectionSource: 'browser',
+    detectionConfidence: 'low'
+  };
+  const detected = auth && typeof auth.detectRegionAndCurrency === 'function'
+    ? auth.detectRegionAndCurrency(user && user.locale ? { locale: user.locale } : null)
+    : emptyRegion;
+  const fallback = { ...emptyRegion, ...detected };
+
+  if (!user || (!user.countryCode && !user.currencyCode)) return fallback;
+
+  const countryCode = String(user.countryCode || '').toUpperCase();
+  const explicit = auth && typeof auth.getRegionByCountryCode === 'function' && countryCode
+    ? auth.getRegionByCountryCode(countryCode)
+    : null;
+  const isManual = user.regionSource === 'manual';
+  const saved = {
+    country: user.country || (explicit && explicit.country) || countryCode || 'Detected region',
+    countryCode,
+    region: user.region || (explicit && explicit.region) || 'Detected',
+    currencyCode: user.currencyCode || (explicit && explicit.currencyCode) || fallback.currencyCode,
+    currencySymbol: user.currencySymbol || (explicit && explicit.currencySymbol) || fallback.currencySymbol,
+    locale: user.locale || (explicit && explicit.locale) || fallback.locale,
+    timeZone: user.timeZone || (explicit && explicit.timeZone) || fallback.timeZone,
+    phonePrefix: user.phonePrefix || (explicit && explicit.phonePrefix) || '',
+    phonePlaceholder: user.phonePlaceholder || (explicit && explicit.phonePlaceholder) || ''
+  };
+
+  return {
+    ...(explicit || {}),
+    ...saved,
+    regionSource: isManual ? 'manual' : 'auto',
+    detectionSource: user.detectionSource || (isManual ? 'manual' : 'saved region'),
+    detectionConfidence: user.detectionConfidence || (isManual ? 'manual' : 'saved')
+  };
+};
+
 window.renderProfileView = function() {
   const auth = typeof AuthService !== 'undefined' ? AuthService : window.AuthService;
   const user = auth ? auth.getCurrentUser() : null;
@@ -846,22 +916,57 @@ window.renderProfileView = function() {
   const phoneEl = document.getElementById('profileViewPhoneDisplay');
   const emailEl = document.getElementById('profileViewEmailDisplay');
 
-  if (nameEl) nameEl.textContent = user.name || 'Alex Mercer';
-  if (nicknameEl) nicknameEl.textContent = user.nickname || ('@' + (user.name || 'alex').toLowerCase().replace(/[^a-z0-9]/g, ''));
-  if (phoneEl) phoneEl.textContent = user.phone || '+1 (555) 234-5678';
-  if (emailEl) emailEl.textContent = user.email || 'alex@vaultsmart.com';
+  if (nameEl) nameEl.textContent = user.name || 'Salvis User';
+  if (nicknameEl) nicknameEl.textContent = user.nickname || ('@' + (user.name || 'user').toLowerCase().replace(/[^a-z0-9]/g, ''));
+  if (phoneEl) phoneEl.textContent = user.phone || 'Not set';
+  if (emailEl) emailEl.textContent = user.email || '';
 
+  const regionInfo = window.resolveRegionInfo(auth, user);
+  const regionLabel = `${regionInfo.country} (${regionInfo.currencyCode} ${regionInfo.currencySymbol})`;
   const regionEl = document.getElementById('profileViewRegionDisplay');
   const staticCurrencyEl = document.getElementById('staticCurrencyText');
-  const regionInfo = (user.country && user.currencyCode) 
-    ? { country: user.country, symbol: user.currencySymbol, code: user.currencyCode }
-    : (auth && auth.detectRegionAndCurrency ? auth.detectRegionAndCurrency() : { country: 'United States 🇺🇸', symbol: '$', code: 'USD' });
-  
-  if (regionEl) {
-    regionEl.textContent = `${regionInfo.country} (${regionInfo.code} ${regionInfo.symbol})`;
+  const regionSelect = document.getElementById('profileRegionSelect');
+  const detectionStatus = document.getElementById('profileRegionDetectionStatus');
+
+  if (document.documentElement && regionInfo.locale) {
+    document.documentElement.lang = String(regionInfo.locale).split(/[-_]/)[0];
   }
-  if (staticCurrencyEl) {
-    staticCurrencyEl.textContent = `${regionInfo.country} (${regionInfo.code} ${regionInfo.symbol})`;
+  if (regionEl) regionEl.textContent = regionLabel;
+  if (staticCurrencyEl) staticCurrencyEl.textContent = regionLabel;
+
+  if (regionSelect && auth && typeof auth.getAvailableRegions === 'function') {
+    if (regionSelect.dataset.optionsReady !== 'true') {
+      const regions = auth.getAvailableRegions();
+      regionSelect.innerHTML = regions.map((region) => `<option value="${region.countryCode}">${region.country} (${region.currencyCode} ${region.currencySymbol})</option>`).join('');
+      regionSelect.dataset.optionsReady = 'true';
+    }
+    const hasDetectedOption = Array.from(regionSelect.options || []).some((option) => option.value === regionInfo.countryCode);
+    if (!hasDetectedOption) {
+      const detectedOption = document.createElement('option');
+      detectedOption.value = regionInfo.countryCode || '';
+      detectedOption.textContent = regionLabel;
+      regionSelect.insertBefore(detectedOption, regionSelect.firstChild);
+    }
+    regionSelect.value = regionInfo.countryCode || '';
+  }
+
+  if (detectionStatus) {
+    const sourceLabels = {
+      ip: 'IP location',
+      'ip-cache': 'cached IP location',
+      timezone: 'browser timezone',
+      locale: 'browser locale',
+      fallback: 'browser settings',
+      manual: 'your selection',
+      currency: 'currency preference'
+    };
+    const pending = auth && typeof auth.isRegionDetectionPending === 'function' && auth.isRegionDetectionPending(user.id);
+    const status = regionInfo.regionSource === 'manual'
+      ? 'Manually selected'
+      : pending
+        ? 'Refining automatically via IP location...'
+        : `Detected automatically via ${sourceLabels[regionInfo.detectionSource] || 'browser settings'}`;
+    detectionStatus.textContent = status;
   }
 
   const avatarEl = document.getElementById('profileImageDisplay');
@@ -880,8 +985,8 @@ window.renderProfileView = function() {
   window.renderProfilesList();
 };
 
-/* ==========================================================================
-   INLINE PROFILE EDITING BAR CONTROLLERS (Nickname Editable, Name & Phone Locked)
+/*    ==========================================================================
+   INLINE PROFILE EDITING BAR CONTROLLERS
    ========================================================================== */
 
 window.openInlineProfileEdit = function() {
@@ -895,9 +1000,13 @@ window.openInlineProfileEdit = function() {
   const legalNameInput = document.getElementById('inlineEditLegalNameInput');
   const phoneInput = document.getElementById('inlineEditPhoneInput');
 
-  if (nicknameInput) nicknameInput.value = user.nickname || ('@' + (user.name || 'alex').toLowerCase().replace(/[^a-z0-9]/g, ''));
-  if (legalNameInput) legalNameInput.value = user.name || 'Alex Mercer';
-  if (phoneInput) phoneInput.value = user.phone || '+1 (555) 234-5678';
+  if (nicknameInput) nicknameInput.value = user.nickname || ('@' + (user.name || 'user').toLowerCase().replace(/[^a-z0-9]/g, ''));
+  if (legalNameInput) legalNameInput.value = user.name || '';
+  if (phoneInput) {
+    phoneInput.value = user.phone || '';
+    const regionInfo = window.resolveRegionInfo(auth, user);
+    phoneInput.placeholder = regionInfo.phonePlaceholder || 'Enter your phone number';
+  }
 
   if (displayBox) displayBox.style.display = 'none';
   if (editBarBox) editBarBox.style.display = 'block';
@@ -911,22 +1020,42 @@ window.closeInlineProfileEdit = function() {
   if (editBarBox) editBarBox.style.display = 'none';
 };
 
-window.saveInlineProfile = function() {
+window.saveInlineProfile = async function() {
   const nicknameInput = document.getElementById('inlineEditNicknameInput');
+  const nameInput = document.getElementById('inlineEditLegalNameInput');
+  const phoneInput = document.getElementById('inlineEditPhoneInput');
   const nickname = nicknameInput ? nicknameInput.value.trim() : '';
+  const name = nameInput ? nameInput.value.trim() : '';
+  const phone = phoneInput ? phoneInput.value.trim() : '';
 
   const auth = typeof AuthService !== 'undefined' ? AuthService : window.AuthService;
   const ui = typeof UIRenderer !== 'undefined' ? UIRenderer : window.UIRenderer;
 
-  if (auth) {
-    auth.updateUserProfile({ nickname });
-    window.renderProfileView();
-    window.closeInlineProfileEdit();
+  if (!auth) return;
+  if (!nickname) {
+    if (ui) ui.showToast('Please enter a nickname.', 'warning');
+    return;
+  }
+  if (phone && phone.replace(/\D/g, '').length < 7) {
+    if (ui) ui.showToast('Please enter a valid phone number.', 'warning');
+    return;
+  }
 
-    if (ui) {
-      ui.renderHeader();
-      ui.showToast('Vault Nickname updated! 💾');
-    }
+  const profileUpdate = { nickname };
+  if (name) profileUpdate.name = name;
+  if (phone) profileUpdate.phone = phone;
+
+  const updated = await auth.updateUserProfile(profileUpdate);
+  if (!updated) {
+    if (ui) ui.showToast('Could not save profile changes.', 'error');
+    return;
+  }
+
+  window.renderProfileView();
+  window.closeInlineProfileEdit();
+  if (ui) {
+    ui.renderHeader();
+    ui.showToast('Profile information updated! 💾');
   }
 };
 
@@ -936,17 +1065,20 @@ window.handleAvatarFileUpload = function(event) {
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = async function(e) {
     const dataUrl = e.target.result;
     const auth = typeof AuthService !== 'undefined' ? AuthService : window.AuthService;
     const ui = typeof UIRenderer !== 'undefined' ? UIRenderer : window.UIRenderer;
 
-    if (auth) {
-      auth.updateUserProfile({ avatar: dataUrl });
-      window.renderProfileView();
-      if (ui) ui.renderHeader();
-      if (ui) ui.showToast('Profile picture updated from media! 📷');
+    if (!auth) return;
+    const updated = await auth.updateUserProfile({ avatar: dataUrl });
+    if (!updated) {
+      if (ui) ui.showToast('Could not save the profile picture.', 'error');
+      return;
     }
+    window.renderProfileView();
+    if (ui) ui.renderHeader();
+    if (ui) ui.showToast('Profile picture updated from media! 📷');
   };
   reader.readAsDataURL(file);
 };
@@ -1016,7 +1148,7 @@ window.openEditProfileModal = function() {
   window.openInlineProfileEdit();
 };
 
-window.saveEditedProfile = function() {
+window.saveEditedProfile = async function() {
   const nameEl = document.getElementById('editNameInput');
   const phoneEl = document.getElementById('editPhoneInput');
   const name = nameEl ? nameEl.value.trim() : '';
@@ -1025,14 +1157,23 @@ window.saveEditedProfile = function() {
   const auth = typeof AuthService !== 'undefined' ? AuthService : window.AuthService;
   const ui = typeof UIRenderer !== 'undefined' ? UIRenderer : window.UIRenderer;
 
-  if (auth) {
-    auth.updateUserProfile({ name, phone });
-    window.renderProfileView();
-    if (ui) {
-      ui.renderHeader();
-      ui.closeModal('editProfileModal');
-      ui.showToast('Profile information updated! 💾');
-    }
+  if (!auth) return;
+  if (!name || !phone) {
+    if (ui) ui.showToast('Name and phone number are required.', 'warning');
+    return;
+  }
+
+  const updated = await auth.updateUserProfile({ name, phone });
+  if (!updated) {
+    if (ui) ui.showToast('Could not save profile changes.', 'error');
+    return;
+  }
+
+  window.renderProfileView();
+  if (ui) {
+    ui.renderHeader();
+    ui.closeModal('editProfileModal');
+    ui.showToast('Profile information updated! 💾');
   }
 };
 
@@ -1085,145 +1226,55 @@ window.switchProfile = function(profileId) {
   }
 };
 
+window.cancelPinChange = function() {
+  pendingPinChangeToken = '';
+  const auth = typeof AuthService !== 'undefined' ? AuthService : window.AuthService;
+  if (auth && typeof auth.cancelPinChange === 'function') auth.cancelPinChange();
+};
+
 window.openChangePinModal = function() {
-  // 1. Open Modal Popup Overlay
-  const modal = document.getElementById('verifyCurrentPinModal');
   const input = document.getElementById('currentPinInput');
-
-  if (input) input.value = '';
-
-  if (modal) {
-    modal.classList.add('active');
-    modal.style.cssText = 'display: flex !important; opacity: 1 !important; visibility: visible !important; pointer-events: auto !important; z-index: 999999 !important;';
-  }
-
   const ui = typeof UIRenderer !== 'undefined' ? UIRenderer : window.UIRenderer;
+  window.cancelPinChange();
+  if (input) input.value = '';
   if (ui && typeof ui.openModal === 'function') {
     ui.openModal('verifyCurrentPinModal');
-  }
-
-  // 2. Open Inline Redirection Panel in Settings Card
-  const panel = document.getElementById('pinChangeInlinePanel');
-  const step1 = document.getElementById('inlinePinStep1');
-  const step2 = document.getElementById('inlinePinStep2');
-  const inlineInput = document.getElementById('inlineCurrentPinInput');
-
-  if (panel) panel.style.display = 'block';
-  if (step1) step1.style.display = 'block';
-  if (step2) step2.style.display = 'none';
-  if (inlineInput) {
-    inlineInput.value = '';
-    setTimeout(() => inlineInput.focus(), 150);
-  }
-
-  setTimeout(() => {
-    if (input) input.focus();
-  }, 100);
-};
-
-window.closeInlinePinPanel = function() {
-  const panel = document.getElementById('pinChangeInlinePanel');
-  if (panel) panel.style.display = 'none';
-};
-
-window.verifyCurrentPinInline = async function(e) {
-  if (e && e.preventDefault) e.preventDefault();
-
-  const auth = typeof AuthService !== 'undefined' ? AuthService : window.AuthService;
-  const ui = typeof UIRenderer !== 'undefined' ? UIRenderer : window.UIRenderer;
-
-  const input = document.getElementById('inlineCurrentPinInput');
-  const enteredPin = input ? input.value.trim() : '';
-
-  if (!enteredPin || enteredPin.length !== 4 || isNaN(enteredPin)) {
-    window.showInputError('inlineCurrentPinInput', 'inlineCurrentPinErrorMsg', 'Please enter a valid 4-digit PIN.');
-    if (ui) ui.showToast('Please enter your current 4-digit PIN 🔑', 'warning');
-    return;
-  }
-
-  const res = auth ? await auth.verifyPin(enteredPin) : null;
-  if (res && res.success) {
-    window.clearInputError('inlineCurrentPinInput', 'inlineCurrentPinErrorMsg');
-    const step1 = document.getElementById('inlinePinStep1');
-    const step2 = document.getElementById('inlinePinStep2');
-    const newPinInput = document.getElementById('inlineNewPinInput');
-    const confirmPinInput = document.getElementById('inlineConfirmPinInput');
-
-    if (step1) step1.style.display = 'none';
-    if (step2) step2.style.display = 'block';
-    if (newPinInput) newPinInput.value = '';
-    if (confirmPinInput) confirmPinInput.value = '';
-
-    setTimeout(() => {
-      if (newPinInput) newPinInput.focus();
-    }, 100);
-  } else if (res && res.locked) {
-    window.showInputError('inlineCurrentPinInput', 'inlineCurrentPinErrorMsg',
-      `Too many attempts. Try again in ${auth ? auth.formatLockout(res.remainingMs) : 30}s 🔒`);
-    if (ui) ui.showToast(`Too many attempts. Try again in ${auth ? auth.formatLockout(res.remainingMs) : 30}s 🔒`, 'error');
   } else {
-    window.showInputError('inlineCurrentPinInput', 'inlineCurrentPinErrorMsg', (res && res.error) || 'Wrong Passkey! Please try again.');
-    if (ui) ui.showToast('Incorrect Current Passkey/PIN. Please try again 🔑', 'warning');
+    const modal = document.getElementById('verifyCurrentPinModal');
+    if (modal) modal.classList.add('active');
   }
 };
 
-window.submitNewPinInline = function(e) {
-  if (e && e.preventDefault) e.preventDefault();
-
-  const auth = typeof AuthService !== 'undefined' ? AuthService : window.AuthService;
-  const ui = typeof UIRenderer !== 'undefined' ? UIRenderer : window.UIRenderer;
-
-  const newPinInput = document.getElementById('inlineNewPinInput');
-  const confirmPinInput = document.getElementById('inlineConfirmPinInput');
-
-  const newPin = newPinInput ? newPinInput.value.trim() : '';
-  const confirmPin = confirmPinInput ? confirmPinInput.value.trim() : '';
-
-  if (!newPin || newPin.length !== 4 || isNaN(newPin)) {
-    if (ui) ui.showToast('New PIN must be a 4-digit number 🔐', 'warning');
-    return;
-  }
-
-  if (newPin !== confirmPin) {
-    if (ui) ui.showToast('New PIN and Confirm PIN do not match! ❌', 'warning');
-    return;
-  }
-
-  if (auth) {
-    auth.updateUserProfile({ pin: newPin });
-    window.closeInlinePinPanel();
-    if (ui) {
-      ui.showToast('Passkey/PIN updated successfully in database! 🔒', 'success');
-    }
-  }
-};
+window.closeInlinePinPanel = function() {};
 
 window.verifyCurrentPin = async function(e) {
   if (e && e.preventDefault) e.preventDefault();
 
   const auth = typeof AuthService !== 'undefined' ? AuthService : window.AuthService;
   const ui = typeof UIRenderer !== 'undefined' ? UIRenderer : window.UIRenderer;
-
   const input = document.getElementById('currentPinInput');
   const enteredPin = input ? input.value.trim() : '';
 
-  if (!enteredPin || enteredPin.length !== 4 || isNaN(enteredPin)) {
+  if (!auth || !auth.isValidPin || !auth.isValidPin(enteredPin)) {
     window.showInputError('currentPinInput', 'currentPinErrorMsg', 'Please enter a valid 4-digit PIN.');
     if (ui) ui.showToast('Please enter your current 4-digit PIN 🔑', 'warning');
     return;
   }
 
-  const res = auth ? await auth.verifyPin(enteredPin) : null;
+  const res = await auth.verifyPin(enteredPin);
   if (res && res.success) {
+    pendingPinChangeToken = auth.beginPinChange(enteredPin) || '';
+    if (!pendingPinChangeToken) {
+      if (ui) ui.showToast('Could not start the PIN update. Please try again.', 'error');
+      return;
+    }
     window.clearInputError('currentPinInput', 'currentPinErrorMsg');
+    if (input) input.value = '';
     if (ui && typeof ui.closeModal === 'function') {
       ui.closeModal('verifyCurrentPinModal');
     } else {
       const verifyModal = document.getElementById('verifyCurrentPinModal');
-      if (verifyModal) {
-        verifyModal.classList.remove('active');
-        verifyModal.style.display = 'none';
-      }
+      if (verifyModal) verifyModal.classList.remove('active');
     }
 
     const newPinInput = document.getElementById('newPinInput');
@@ -1235,90 +1286,116 @@ window.verifyCurrentPin = async function(e) {
       ui.openModal('updateNewPinModal');
     } else {
       const updateModal = document.getElementById('updateNewPinModal');
-      if (updateModal) {
-        updateModal.classList.add('active');
-        updateModal.style.cssText = 'display: flex !important; opacity: 1 !important; pointer-events: auto !important; z-index: 999999 !important;';
-      }
+      if (updateModal) updateModal.classList.add('active');
     }
 
     setTimeout(() => {
       if (newPinInput) newPinInput.focus();
     }, 100);
-  } else if (res && res.locked) {
-    window.showInputError('currentPinInput', 'currentPinErrorMsg',
-      `Too many attempts. Try again in ${auth ? auth.formatLockout(res.remainingMs) : 30}s 🔒`);
-    if (ui) ui.showToast(`Too many attempts. Try again in ${auth ? auth.formatLockout(res.remainingMs) : 30}s 🔒`, 'error');
+    return;
+  }
+
+  window.cancelPinChange();
+  if (res && res.locked) {
+    const message = `Too many attempts. Try again in ${auth ? auth.formatLockout(res.remainingMs) : 30}s 🔒`;
+    window.showInputError('currentPinInput', 'currentPinErrorMsg', message);
+    if (ui) ui.showToast(message, 'error');
   } else {
-    window.showInputError('currentPinInput', 'currentPinErrorMsg', (res && res.error) || 'Wrong Passkey! Incorrect current PIN.');
-    if (ui) ui.showToast('Incorrect Current Passkey/PIN. Please try again 🔑', 'warning');
+    const message = (res && res.error) || 'Incorrect current PIN.';
+    window.showInputError('currentPinInput', 'currentPinErrorMsg', message);
+    if (ui) ui.showToast('Incorrect current PIN. Please try again.', 'warning');
   }
 };
 
-window.submitNewPinUpdate = function(e) {
+window.submitNewPinUpdate = async function(e) {
   if (e && e.preventDefault) e.preventDefault();
 
   const auth = typeof AuthService !== 'undefined' ? AuthService : window.AuthService;
   const ui = typeof UIRenderer !== 'undefined' ? UIRenderer : window.UIRenderer;
-
   const newPinInput = document.getElementById('newPinInput');
   const confirmPinInput = document.getElementById('confirmPinInput');
-
   const newPin = newPinInput ? newPinInput.value.trim() : '';
   const confirmPin = confirmPinInput ? confirmPinInput.value.trim() : '';
 
-  if (!newPin || newPin.length !== 4 || isNaN(newPin)) {
+  if (!auth || !auth.isValidPin || !auth.isValidPin(newPin)) {
     if (ui) ui.showToast('New PIN must be a 4-digit number 🔐', 'warning');
     return;
   }
-
   if (newPin !== confirmPin) {
     if (ui) ui.showToast('New PIN and Confirm PIN do not match! ❌', 'warning');
     return;
   }
+  if (!pendingPinChangeToken) {
+    if (ui) ui.showToast('Verify your current PIN again before setting a new PIN.', 'warning');
+    if (ui && typeof ui.closeModal === 'function') ui.closeModal('updateNewPinModal');
+    if (ui && typeof ui.openModal === 'function') ui.openModal('verifyCurrentPinModal');
+    return;
+  }
 
-  if (auth) {
-    auth.updateUserProfile({ pin: newPin });
+  const res = await auth.completePinChange(pendingPinChangeToken, newPin);
+  pendingPinChangeToken = '';
+  if (res && res.success) {
+    window.cancelPinChange();
     if (ui && typeof ui.closeModal === 'function') {
       ui.closeModal('updateNewPinModal');
     } else {
       const updateModal = document.getElementById('updateNewPinModal');
-      if (updateModal) {
-        updateModal.classList.remove('active');
-        updateModal.style.display = 'none';
-      }
+      if (updateModal) updateModal.classList.remove('active');
     }
-    if (ui) {
-      ui.showToast('Passkey/PIN updated successfully in database! 🔒', 'success');
-    }
+    if (ui) ui.showToast('Security PIN updated successfully! 🔒', 'success');
+    return;
+  }
+
+  if (res && res.locked) {
+    if (ui) ui.showToast(`Too many attempts. Try again in ${auth.formatLockout(res.remainingMs)}s 🔒`, 'error');
+  } else if (ui) {
+    ui.showToast((res && res.error) || 'Could not update the Security PIN.', 'error');
   }
 };
 
-window.updateUserCurrencyPreference = function(code) {
-  const currencyMap = {
-    'INR': { country: 'India 🇮🇳', region: 'Asia/South', currencyCode: 'INR', currencySymbol: '₹', locale: 'en-IN' },
-    'USD': { country: 'United States 🇺🇸', region: 'America/North', currencyCode: 'USD', currencySymbol: '$', locale: 'en-US' },
-    'GBP': { country: 'United Kingdom 🇬🇧', region: 'Europe/West', currencyCode: 'GBP', currencySymbol: '£', locale: 'en-GB' },
-    'EUR': { country: 'Eurozone 🇪🇺', region: 'Europe/Central', currencyCode: 'EUR', currencySymbol: '€', locale: 'de-DE' },
-    'JPY': { country: 'Japan 🇯🇵', region: 'Asia/East', currencyCode: 'JPY', currencySymbol: '¥', locale: 'ja-JP' },
-    'CAD': { country: 'Canada 🇨🇦', region: 'America/North', currencyCode: 'CAD', currencySymbol: 'CA$', locale: 'en-CA' },
-    'AUD': { country: 'Australia 🇦🇺', region: 'Australia/East', currencyCode: 'AUD', currencySymbol: 'A$', locale: 'en-AU' }
-  };
-
-  const selectedInfo = currencyMap[code] || currencyMap['USD'];
+window.updateUserRegion = async function(countryCode) {
   const auth = typeof AuthService !== 'undefined' ? AuthService : window.AuthService;
   const ui = typeof UIRenderer !== 'undefined' ? UIRenderer : window.UIRenderer;
+  const selectedInfo = auth && typeof auth.getRegionByCountryCode === 'function'
+    ? auth.getRegionByCountryCode(countryCode)
+    : null;
 
-  if (auth) {
-    auth.updateUserProfile(selectedInfo);
+  if (!selectedInfo) {
     window.renderProfileView();
-    if (ui) {
-      ui.renderHeader();
-      ui.renderMetrics();
-      ui.renderGoals();
-      ui.renderChart();
-      ui.showToast(`Currency set to ${selectedInfo.country} (${selectedInfo.currencyCode} ${selectedInfo.currencySymbol}) 🌐`);
-    }
+    if (ui) ui.showToast('That region is not available.', 'error');
+    return;
   }
+
+  const updated = auth ? await auth.updateUserProfile({
+    ...selectedInfo,
+    regionSource: 'manual',
+    detectionSource: 'manual',
+    detectionConfidence: 'manual'
+  }) : null;
+
+  if (!updated) {
+    window.renderProfileView();
+    if (ui) ui.showToast('Could not save the region preference.', 'error');
+    return;
+  }
+
+  window.renderProfileView();
+  if (ui) {
+    ui.renderHeader();
+    if (ui.renderMetrics) ui.renderMetrics();
+    if (ui.renderGoals) ui.renderGoals();
+    if (ui.renderChart) ui.renderChart();
+    if (ui.renderAnalytics) ui.renderAnalytics();
+    ui.showToast(`Region set to ${selectedInfo.country} (${selectedInfo.currencyCode} ${selectedInfo.currencySymbol})`);
+  }
+};
+
+window.updateUserCurrencyPreference = async function(code) {
+  const auth = typeof AuthService !== 'undefined' ? AuthService : window.AuthService;
+  if (!auth || typeof auth.getRegionByCurrencyCode !== 'function') return;
+  const selectedInfo = auth.getRegionByCurrencyCode(code);
+  if (!selectedInfo) return;
+  await window.updateUserRegion(selectedInfo.countryCode);
 };
 
 

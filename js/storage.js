@@ -88,7 +88,7 @@ class StorageService {
   }
 
   static saveUsers(users) {
-    this.setItemSafe(STORAGE_KEYS.USERS, JSON.stringify(users));
+    return this.setItemSafe(STORAGE_KEYS.USERS, JSON.stringify(users));
   }
 
   static clearAllDatabase() {
@@ -134,6 +134,8 @@ class StorageService {
 
   static saveGoal(goal) {
     const goals = this.getGoals();
+    if (!Array.isArray(goal.priceHistory)) goal.priceHistory = [];
+    if (goal.is_tracked && !goal.track_mode) goal.track_mode = 'url';
     const idx = goals.findIndex((g) => g.id === goal.id);
     if (idx >= 0) goals[idx] = goal;
     else goals.unshift(goal);
