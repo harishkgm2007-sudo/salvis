@@ -15,3 +15,5 @@ services:
         value: "true"
       - key: CORS_ORIGINS
         value: https://harishkgm2007-sudo.github.io
+      - key: SCRAPER_API_KEY
+        sync: false
