@@ -672,11 +672,11 @@ class UIRenderer {
     const originalBtnText = fetchBtn?.textContent || 'Fetch Price';
     if (fetchBtn) {
       fetchBtn.disabled = true;
-      fetchBtn.textContent = 'Scanning...';
+      fetchBtn.textContent = 'Scanning (may take up to 20s)…';
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 7000);
+    const timeoutId = setTimeout(() => controller.abort(), 22000);
 
     try {
       const response = await fetch(apiUrl, {
@@ -744,18 +744,25 @@ class UIRenderer {
       const isTimeout = err.name === 'AbortError' || (err.message && err.message.toLowerCase().includes('timed out'));
       const detectedStore = this._getStoreName(url);
 
+      // Pre-fill item name if still blank so manual form is useful
       const itemName = document.getElementById('createItemName') || document.getElementById('wizItemName');
-      const targetAmount = document.getElementById('createTargetAmount') || document.getElementById('wizTargetAmount');
       if (itemName && (!itemName.value.trim() || itemName.value === 'e.g. Sony WH-1000XM5')) {
         itemName.value = `${detectedStore} Product`;
+        if (this.state.wizardData) this.state.wizardData.itemName = itemName.value;
       }
-      if (targetAmount) targetAmount.focus();
 
-      if (isTimeout) {
-        this.showToast(`${detectedStore} scan timed out. Enter price manually below.`, 'warning');
-      } else {
-        this.showToast(err.message || 'Price scan unavailable. Enter price manually below.', 'warning');
-      }
+      const message = isTimeout
+        ? `${detectedStore} scan timed out. Enter price manually below.`
+        : (err.message || 'Price scan unavailable. Enter price manually below.');
+
+      // Transition the wizard to manual-entry mode (sets is_captcha flag & re-renders)
+      this._activateManualPriceFallback(url, message);
+
+      // Focus the price field after re-render
+      requestAnimationFrame(() => {
+        const targetAmount = document.getElementById('createTargetAmount') || document.getElementById('wizTargetAmount');
+        if (targetAmount) targetAmount.focus();
+      });
     } finally {
       clearTimeout(timeoutId);
       if (fetchBtn) {
@@ -789,13 +796,13 @@ class UIRenderer {
     const detailButton = document.getElementById('btnRefreshDetailPrice');
     if (detailButton) {
       detailButton.disabled = true;
-      detailButton.textContent = 'Checking...';
+      detailButton.textContent = 'Scanning (may take up to 20s)…';
     }
     const buttons = document.querySelectorAll('.btn-refresh-price');
     buttons.forEach((button) => {
       if (button.getAttribute('data-goal-id') === goalId) {
         button.disabled = true;
-        button.textContent = 'Checking...';
+        button.textContent = 'Scanning (may take up to 20s)…';
       }
     });
 
@@ -806,7 +813,7 @@ class UIRenderer {
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 7000);
+    const timeoutId = setTimeout(() => controller.abort(), 22000);
 
     try {
       const response = await fetch(apiUrl, {
@@ -869,7 +876,7 @@ class UIRenderer {
       let changed = false;
       for (const goal of tracked) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 6000);
+        const timeoutId = setTimeout(() => controller.abort(), 22000);
         try {
           const response = await fetch(apiUrl, {
             method: 'POST',

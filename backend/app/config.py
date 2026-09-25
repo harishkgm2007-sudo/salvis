@@ -19,6 +19,10 @@ class Settings(BaseSettings):
 
     GOOGLE_CLIENT_ID: str = ""
 
+    # ScraperAPI — set this to enable bot-bypass proxying for Amazon et al.
+    # Leave blank to fall back to direct httpx (works for non-bot-protected stores).
+    SCRAPER_API_KEY: str = ""
+
     CORS_ORIGINS: str = (
         "https://harishkgm2007-sudo.github.io,"
         "http://localhost:8000,"

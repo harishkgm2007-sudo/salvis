@@ -4,12 +4,15 @@ import json
 import re
 import random
 import socket
-from urllib.parse import urlsplit
+from pathlib import Path
+from urllib.parse import quote_plus, urlsplit
 
 import httpx
 from bs4 import BeautifulSoup
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from .api import auth_routes, bank_routes, profile_routes, sync_routes, transaction_routes, vault_routes
@@ -198,6 +201,31 @@ USER_AGENTS = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
 )
 
+# Stores that reliably block plain httpx — proxied through ScraperAPI when key is set.
+_BOT_PROTECTED_STORES = ("amazon", "flipkart", "walmart", "myntra")
+
+
+def _scrape_url(target_url: str) -> str:
+    """Return the URL to actually fetch.
+
+    If SCRAPER_API_KEY is configured AND the store is bot-protected, route
+    through ScraperAPI (residential proxies + CAPTCHA bypass); otherwise fetch
+    directly so non-protected stores (eBay, Etsy, …) don't waste tokens.
+    """
+    key = settings.SCRAPER_API_KEY
+    if not key:
+        return target_url
+    hostname = (urlsplit(target_url).hostname or "").lower()
+    if not any(store in hostname for store in _BOT_PROTECTED_STORES):
+        return target_url
+    return (
+        f"https://api.scraperapi.com/"
+        f"?api_key={key}"
+        f"&url={quote_plus(target_url)}"
+        f"&country_code=in"   # serve Indian-locale prices
+        f"&render=false"      # JS rendering costs 10× tokens; enable only if needed
+    )
+
 
 async def _validate_product_url(url: str) -> None:
     parsed = urlsplit(url)
@@ -233,7 +261,7 @@ def create_app() -> FastAPI:
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origin_list,
+        allow_origins=["*"],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -259,17 +287,22 @@ def create_app() -> FastAPI:
             "Sec-Fetch-User": "?1",
             "Upgrade-Insecure-Requests": "1",
         }
-        client_timeout = httpx.Timeout(6.0, connect=3.0)
+        fetch_url = _scrape_url(payload.url)
+        is_proxied = fetch_url != payload.url
+        client_timeout = httpx.Timeout(18.0 if is_proxied else 10.0, connect=5.0)
         try:
             async with httpx.AsyncClient(headers=headers, follow_redirects=True, timeout=client_timeout) as client:
-                response = await client.get(payload.url)
+                response = await client.get(fetch_url)
             for redirect in [*response.history, response]:
-                await _validate_product_url(str(redirect.url))
+                final_url = str(redirect.url)
+                if (urlsplit(final_url).hostname or "").lower() != "api.scraperapi.com":
+                    await _validate_product_url(final_url)
             if len(response.content) > 8 * 1024 * 1024:
                 raise HTTPException(status_code=413, detail="Product page is too large to scan")
             soup = BeautifulSoup(response.text, "html.parser")
             is_captcha = _looks_like_captcha(soup, response.status_code)
-            product = _extract_product(soup, str(response.url), is_captcha=is_captcha)
+            product_url = payload.url if is_proxied else str(response.url)
+            product = _extract_product(soup, product_url, is_captcha=is_captcha)
             return product
         except HTTPException:
             raise
@@ -286,6 +319,39 @@ def create_app() -> FastAPI:
     app.include_router(profile_routes.router, prefix=settings.API_PREFIX)
     app.include_router(bank_routes.router, prefix=settings.API_PREFIX)
     app.include_router(sync_routes.router, prefix=settings.API_PREFIX)
+
+    frontend_dir = Path(__file__).resolve().parents[2]
+
+    @app.get("/", include_in_schema=False)
+    @app.get("/Salvis.html", include_in_schema=False)
+    @app.get("/index.html", include_in_schema=False)
+    def serve_index():
+        salvis_html = frontend_dir / "Salvis.html"
+        if salvis_html.exists():
+            return FileResponse(salvis_html)
+        raise HTTPException(status_code=404, detail="Salvis.html not found")
+
+    @app.get("/manifest.json", include_in_schema=False)
+    def serve_manifest():
+        manifest = frontend_dir / "manifest.json"
+        if manifest.exists():
+            return FileResponse(manifest)
+        raise HTTPException(status_code=404, detail="manifest.json not found")
+
+    @app.get("/sw.js", include_in_schema=False)
+    def serve_sw():
+        sw = frontend_dir / "sw.js"
+        if sw.exists():
+            return FileResponse(sw, media_type="application/javascript")
+        raise HTTPException(status_code=404, detail="sw.js not found")
+
+    css_dir = frontend_dir / "css"
+    if css_dir.exists():
+        app.mount("/css", StaticFiles(directory=str(css_dir)), name="css")
+
+    js_dir = frontend_dir / "js"
+    if js_dir.exists():
+        app.mount("/js", StaticFiles(directory=str(js_dir)), name="js")
 
     return app
 
