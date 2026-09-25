@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: salvis-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /healthz
+    envVars:
+      - key: DATABASE_URL
+        value: sqlite:////tmp/salvis.db
+      - key: JWT_SECRET
+        generateValue: true
+      - key: AUTO_CREATE_TABLES
+        value: "true"
+      - key: CORS_ORIGINS
+        value: https://harishkgm2007-sudo.github.io

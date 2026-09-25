@@ -100,3 +100,13 @@ follow-up is an `ApiClient` adapter that:
    cache for offline edits.
 3. Uses `/api/sync/merge` on load and after every mutation so data follows the
    user across devices.
+
+## Public scraper deployment
+
+GitHub Pages serves only the static frontend. Deploy the FastAPI service separately so the public Pages app can call `/api/scrape-product`. The repository includes a `render.yaml` blueprint for a free Render web service. After Render creates the service, set `window.SALVIS_API_URL` in `Salvis.html` to the service origin, without `/api/scrape-product`, for example:
+
+```html
+<script>window.SALVIS_API_URL = '<your-render-service-host>';</script>
+```
+
+The frontend also switches URL vaults to manual-price fallback when no public API URL is configured, so static deployments remain usable.

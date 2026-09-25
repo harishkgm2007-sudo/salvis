@@ -524,8 +524,9 @@ class UIRenderer {
   static _getProductApiUrl() {
     const configured = window.SALVIS_API_URL;
     if (configured) return String(configured).replace(/\/$/, '') + '/api/scrape-product';
-    const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
     const hostname = window.location.hostname || 'localhost';
+    if (hostname.endsWith('.github.io')) return null;
+    const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
     return `${protocol}//${hostname}:8000/api/scrape-product`;
   }
 
@@ -633,6 +634,26 @@ class UIRenderer {
     this.showToast('Manual price confirmed; the product link is still being tracked');
   }
 
+  static _activateManualPriceFallback(url, message) {
+    this._syncCreationForm();
+    const storeName = this._getStoreName(url);
+    this.state.fetchedProductData = {
+      title: this.state.wizardData.itemName || `${storeName} Product`,
+      price: 0,
+      image_url: this.state.wizardData.image_url || '',
+      store_name: storeName,
+      is_captcha: true,
+      manualFallback: true
+    };
+    this.state.wizardData = {
+      ...this.state.wizardData,
+      product_url: url,
+      store_name: storeName
+    };
+    this.renderWizardStep();
+    this.showToast(message, 'warning');
+  }
+
   static async fetchProductMetadata() {
     const urlInput = document.getElementById('productUrlInput');
     const fetchBtn = document.getElementById('btnFetchUrl');
@@ -642,6 +663,11 @@ class UIRenderer {
       return;
     }
     this._syncCreationForm();
+    const apiUrl = this._getProductApiUrl();
+    if (!apiUrl) {
+      this._activateManualPriceFallback(url, 'Live price fetch is unavailable on static hosting. Enter the target price manually.');
+      return;
+    }
 
     const originalBtnText = fetchBtn?.textContent || 'Fetch Price';
     if (fetchBtn) {
@@ -653,7 +679,7 @@ class UIRenderer {
     const timeoutId = setTimeout(() => controller.abort(), 7000);
 
     try {
-      const response = await fetch(this._getProductApiUrl(), {
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
@@ -773,11 +799,17 @@ class UIRenderer {
       }
     });
 
+    const apiUrl = this._getProductApiUrl();
+    if (!apiUrl) {
+      this.showToast('Live price checking is unavailable until the Salvis API is hosted.', 'warning');
+      return;
+    }
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 7000);
 
     try {
-      const response = await fetch(this._getProductApiUrl(), {
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: goal.product_url }),
@@ -829,6 +861,9 @@ class UIRenderer {
     const tracked = storage.getGoals().filter((goal) => goal.is_tracked && goal.product_url);
     if (!tracked.length) return;
 
+    const apiUrl = this._getProductApiUrl();
+    if (!apiUrl) return;
+
     this.state.trackedVaultRefreshInFlight = true;
     try {
       let changed = false;
@@ -836,7 +871,7 @@ class UIRenderer {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 6000);
         try {
-          const response = await fetch(this._getProductApiUrl(), {
+          const response = await fetch(apiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url: goal.product_url }),
@@ -1040,7 +1075,8 @@ class UIRenderer {
     this._syncCreationForm();
     const wd = this.state.wizardData;
     const isShopping = this.state.vaultType === 'shopping';
-    const isTracked = isShopping && this.state.shoppingMode === 'url';
+    const liveApiAvailable = Boolean(this._getProductApiUrl());
+    const isTracked = isShopping && this.state.shoppingMode === 'url' && liveApiAvailable;
     if (!wd.itemName || !(wd.targetAmount > 0)) {
       this.showToast('Add a title and a target amount first', 'warning');
       return;
@@ -1057,7 +1093,7 @@ class UIRenderer {
       userId: user ? user.id : null,
       vaultType: isShopping ? 'shopping' : 'personal',
       shoppingMode: isShopping ? this.state.shoppingMode : null,
-      track_mode: isShopping ? this.state.shoppingMode : null,
+      track_mode: isTracked ? 'url' : (isShopping ? 'manual' : null),
       itemName: wd.itemName,
       store_name: isShopping ? (wd.store_name || (isTracked ? this._getStoreName(wd.product_url) : '')) : '',
       category: isShopping ? 'Shopping' : wd.category,
