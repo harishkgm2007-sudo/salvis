@@ -1124,14 +1124,14 @@
   <script src="js/notifications.js"></script>
   <script src="js/router.js"></script>
   <script src="js/modals.js"></script>
-  <script src="js/ui.js"></script>
+  <script src="js/ui.js?v=19c4b55"></script>
   <script src="js/app.js"></script>
 
   <!-- PWA Service Worker Registration -->
   <script>
     if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('sw.js').catch(function (err) {
+        navigator.serviceWorker.register('sw.js?v=19c4b55').catch(function (err) {
           console.warn('[Salvis PWA] Service Worker registration failed:', err);
         });
       });
