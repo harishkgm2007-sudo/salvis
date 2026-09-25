@@ -3,7 +3,7 @@
  * Caches core app assets on install, then serves them offline.
  */
 
-const CACHE_NAME = 'salvis-v3';
+const CACHE_NAME = 'salvis-v4';
 const CORE_ASSETS = [
   './',
   './Salvis.html',
